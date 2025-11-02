@@ -43,13 +43,6 @@ export default function RegistrationPage() {
 
   const handleRegIn = async () => {
     if (!selectedUser || actionLoading) return
-    
-    if (selectedUser.currentStatus !== "gate-in") {
-      toast.error("Cannot Registration-In", {
-        description: "Student must complete Gate-In before Registration-In",
-      })
-      return
-    }
 
     try {
       setActionLoading(true)
@@ -57,6 +50,11 @@ export default function RegistrationPage() {
       
       toast.success(`Registration-In completed for ${selectedUser.name}`, {
         description: `Student ${selectedUser.id} is now registered-in`,
+        style: {
+          background: '#10b981',
+          color: 'white',
+          border: '1px solid #059669'
+        }
       })
       
       // Refresh the users list and clear selection
@@ -65,6 +63,11 @@ export default function RegistrationPage() {
     } catch (error) {
       toast.error("Failed to update status", {
         description: error instanceof Error ? error.message : "Unknown error occurred",
+        style: {
+          background: '#ef4444',
+          color: 'white',
+          border: '1px solid #dc2626'
+        }
       })
     } finally {
       setActionLoading(false)
@@ -73,13 +76,6 @@ export default function RegistrationPage() {
 
   const handleRegOut = async () => {
     if (!selectedUser || actionLoading) return
-    
-    if (selectedUser.currentStatus !== "reg-in") {
-      toast.error("Invalid Action", {
-        description: "Student must be registered-in to perform registration-out",
-      })
-      return
-    }
 
     try {
       setActionLoading(true)
@@ -87,6 +83,11 @@ export default function RegistrationPage() {
       
       toast.success(`Registration-Out completed for ${selectedUser.name}`, {
         description: `Student ${selectedUser.id} is now registered-out`,
+        style: {
+          background: '#10b981',
+          color: 'white',
+          border: '1px solid #059669'
+        }
       })
       
       // Refresh the users list and clear selection
@@ -95,30 +96,15 @@ export default function RegistrationPage() {
     } catch (error) {
       toast.error("Failed to update status", {
         description: error instanceof Error ? error.message : "Unknown error occurred",
+        style: {
+          background: '#ef4444',
+          color: 'white',
+          border: '1px solid #dc2626'
+        }
       })
     } finally {
       setActionLoading(false)
     }
-  }
-
-  const getNextActions = (status: SecurityStatus) => {
-    switch (status) {
-      case "gate-out":
-        return ["gate-in"]
-      case "gate-in":
-        return ["gate-out", "reg-in"]
-      case "reg-in":
-        return ["reg-out"]
-      case "reg-out":
-        return ["gate-out"]
-      default:
-        return []
-    }
-  }
-
-  const canPerformAction = (action: string) => {
-    if (!selectedUser) return false
-    return getNextActions(selectedUser.currentStatus).includes(action)
   }
 
   const getStatusDisplay = (status: SecurityStatus) => {
@@ -260,14 +246,14 @@ export default function RegistrationPage() {
                     <div className="flex gap-3 pt-4">
                       <Button
                         onClick={handleRegIn}
-                        disabled={!canPerformAction("reg-in") || actionLoading}
+                        disabled={actionLoading}
                         className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {actionLoading ? "Updating..." : "Registration In"}
                       </Button>
                       <Button
                         onClick={handleRegOut}
-                        disabled={!canPerformAction("reg-out") || actionLoading}
+                        disabled={actionLoading}
                         className="flex-1 bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {actionLoading ? "Updating..." : "Registration Out"}

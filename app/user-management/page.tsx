@@ -57,6 +57,11 @@ export default function UserManagementPage() {
       
       toast.success("User updated successfully", {
         description: `Information for ${selectedUser.name} has been updated`,
+        style: {
+          background: '#10b981',
+          color: 'white',
+          border: '1px solid #059669'
+        }
       })
       
       // Refresh the users list and clear selection
@@ -66,6 +71,11 @@ export default function UserManagementPage() {
     } catch (error) {
       toast.error("Failed to update user", {
         description: error instanceof Error ? error.message : "Unknown error occurred",
+        style: {
+          background: '#ef4444',
+          color: 'white',
+          border: '1px solid #dc2626'
+        }
       })
     } finally {
       setActionLoading(false)
