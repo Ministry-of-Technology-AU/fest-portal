@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model status_trail {
+  trailId   Int                 @id @default(autoincrement())
+  userId    String              @db.VarChar(6)
+  status    status_trail_status
+  timestamp DateTime            @db.DateTime(0)
+  source    status_trail_source
+  user      user                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "status_trail_ibfk_1")
+
+  @@index([userId], map: "userId")
+}
+
+model user {
+  id             String             @id @db.VarChar(6)
+  name           String             @db.VarChar(255)
+  collegeName    String             @db.VarChar(255)
+  email          String             @unique(map: "email") @db.VarChar(255)
+  phoneNumber    String             @db.VarChar(20)
+  visitDates     String             @db.Text
+  currentStatus  user_currentStatus @default(gate_out)
+  lastStatusTime DateTime           @db.DateTime(0)
+  status_trail   status_trail[]
+  user_event     user_event[]
+}
+
+model user_event {
+  userId    String @db.VarChar(6)
+  eventId   Int
+  eventName String @db.VarChar(255)
+  user      user   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_event_ibfk_1")
+
+  @@id([userId, eventId])
+}
+
+enum status_trail_status {
+  gate_out @map("gate-out")
+  gate_in  @map("gate-in")
+  reg_in   @map("reg-in")
+  reg_out  @map("reg-out")
+}
+
+enum status_trail_source {
+  gate
+  registration
+  admin
+  system
+}
+
+enum user_currentStatus {
+  gate_out @map("gate-out")
+  gate_in  @map("gate-in")
+  reg_in   @map("reg-in")
+  reg_out  @map("reg-out")
+}
