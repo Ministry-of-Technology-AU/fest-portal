@@ -54,3 +54,20 @@ export async function updateGateStatus(userId: string, action: 'gate-in' | 'gate
 
   return response.json()
 }
+
+export async function updateRegistrationStatus(userId: string, action: 'reg-in' | 'reg-out') {
+  const response = await fetch('/api/registration', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId, action }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update status')
+  }
+
+  return response.json()
+}

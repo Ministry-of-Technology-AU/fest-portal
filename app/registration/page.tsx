@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 import { AuthGuard } from "@/components/auth-guard"
 import { Navigation } from "@/components/navigation"
@@ -8,105 +8,97 @@ import { UserSearch } from "@/components/user-search"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { User, SecurityStatus } from "@/lib/types"
-import { dummyUsers } from "@/lib/dummy-data"
+import { useUsers, updateRegistrationStatus } from "@/lib/api"
 
 export default function RegistrationPage() {
-  const [users, setUsers] = useState<User[]>(dummyUsers)
+  const { users, loading, error, refetch } = useUsers()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    const stored = localStorage.getItem("portalUsers")
-    if (stored) {
-      try {
-        const parsedUsers = JSON.parse(stored)
-        // Migrate old data format to new format
-        const migratedUsers = parsedUsers.map((user: any) => ({
-          ...user,
-          currentStatus: user.currentStatus || getStatusFromLegacyFields(user),
-          lastStatusTime: user.lastStatusTime || new Date().toISOString(),
-          statusTrail: user.statusTrail || [
-            {
-              status: user.currentStatus || getStatusFromLegacyFields(user),
-              timestamp: user.lastStatusTime || new Date().toISOString(),
-              source: "system"
-            }
-          ],
-        }))
-        setUsers(migratedUsers)
-      } catch (error) {
-        console.error("Error parsing stored users:", error)
-        setUsers(dummyUsers)
-      }
-    }
-  }, [])
-
-  // Helper function to migrate legacy data
-  const getStatusFromLegacyFields = (user: any): SecurityStatus => {
-    if (user.regOutTime) return "reg-out"
-    if (user.regInTime) return "reg-in"
-    if (user.gateInTime) return "gate-in"
-    return "gate-out"
-  }
-
-  const updateUserStatus = (newStatus: SecurityStatus) => {
-    if (!selectedUser) return
-
-    const timestamp = new Date().toISOString()
-    const updatedUsers = users.map((u) =>
-      u.id === selectedUser.id
-        ? {
-            ...u,
-            currentStatus: newStatus,
-            lastStatusTime: timestamp,
-            statusTrail: [
-              ...u.statusTrail,
-              {
-                status: newStatus,
-                timestamp: timestamp,
-                source: "registration" as const
-              }
-            ]
-          }
-        : u,
+  if (loading) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background">
+          <Navigation />
+          <main className="max-w-4xl mx-auto px-4 py-8">
+            <div className="text-center">Loading...</div>
+          </main>
+        </div>
+      </AuthGuard>
     )
-    setUsers(updatedUsers)
-    localStorage.setItem("portalUsers", JSON.stringify(updatedUsers))
-    
-    // Show success toast
-    const statusLabels = {
-      "gate-in": "Gate-In",
-      "gate-out": "Gate-Out",
-      "reg-in": "Registration-In",
-      "reg-out": "Registration-Out",
-    }
-    
-    toast.success(`${statusLabels[newStatus]} completed for ${selectedUser.name}`, {
-      description: `Student ${selectedUser.id} is now ${statusLabels[newStatus].toLowerCase()}`,
-    })
-    
-    setSelectedUser(null)
   }
 
-  const handleRegIn = () => {
-    if (!selectedUser) return
+  if (error) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background">
+          <Navigation />
+          <main className="max-w-4xl mx-auto px-4 py-8">
+            <div className="text-center text-red-500">Error: {error}</div>
+          </main>
+        </div>
+      </AuthGuard>
+    )
+  }
+
+  const handleRegIn = async () => {
+    if (!selectedUser || actionLoading) return
+    
     if (selectedUser.currentStatus !== "gate-in") {
       toast.error("Cannot Registration-In", {
         description: "Student must complete Gate-In before Registration-In",
       })
       return
     }
-    updateUserStatus("reg-in")
+
+    try {
+      setActionLoading(true)
+      await updateRegistrationStatus(selectedUser.id, "reg-in")
+      
+      toast.success(`Registration-In completed for ${selectedUser.name}`, {
+        description: `Student ${selectedUser.id} is now registered-in`,
+      })
+      
+      // Refresh the users list and clear selection
+      await refetch()
+      setSelectedUser(null)
+    } catch (error) {
+      toast.error("Failed to update status", {
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+      })
+    } finally {
+      setActionLoading(false)
+    }
   }
 
-  const handleRegOut = () => {
-    if (!selectedUser) return
+  const handleRegOut = async () => {
+    if (!selectedUser || actionLoading) return
+    
     if (selectedUser.currentStatus !== "reg-in") {
       toast.error("Invalid Action", {
         description: "Student must be registered-in to perform registration-out",
       })
       return
     }
-    updateUserStatus("reg-out")
+
+    try {
+      setActionLoading(true)
+      await updateRegistrationStatus(selectedUser.id, "reg-out")
+      
+      toast.success(`Registration-Out completed for ${selectedUser.name}`, {
+        description: `Student ${selectedUser.id} is now registered-out`,
+      })
+      
+      // Refresh the users list and clear selection
+      await refetch()
+      setSelectedUser(null)
+    } catch (error) {
+      toast.error("Failed to update status", {
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+      })
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const getNextActions = (status: SecurityStatus) => {
@@ -268,17 +260,17 @@ export default function RegistrationPage() {
                     <div className="flex gap-3 pt-4">
                       <Button
                         onClick={handleRegIn}
-                        disabled={!canPerformAction("reg-in")}
+                        disabled={!canPerformAction("reg-in") || actionLoading}
                         className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Registration In
+                        {actionLoading ? "Updating..." : "Registration In"}
                       </Button>
                       <Button
                         onClick={handleRegOut}
-                        disabled={!canPerformAction("reg-out")}
+                        disabled={!canPerformAction("reg-out") || actionLoading}
                         className="flex-1 bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Registration Out
+                        {actionLoading ? "Updating..." : "Registration Out"}
                       </Button>
                     </div>
                   </CardContent>
