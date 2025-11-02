@@ -71,3 +71,37 @@ export async function updateRegistrationStatus(userId: string, action: 'reg-in' 
 
   return response.json()
 }
+
+export async function updateUser(userId: string, userData: Partial<User>) {
+  const response = await fetch('/api/update-user', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId, userData }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update user')
+  }
+
+  return response.json()
+}
+
+export async function createUser(userData: Omit<User, 'currentStatus' | 'lastStatusTime' | 'statusTrail'>) {
+  const response = await fetch('/api/create-user', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userData }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to create user')
+  }
+
+  return response.json()
+}

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { toast } from "sonner"
 import { AuthGuard } from "@/components/auth-guard"
 import { Navigation } from "@/components/navigation"
 import { UserSearch } from "@/components/user-search"
@@ -8,33 +9,67 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { User } from "@/lib/types"
-import { dummyUsers } from "@/lib/dummy-data"
+import { useUsers, updateUser } from "@/lib/api"
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<User[]>(dummyUsers)
+  const { users, loading, error, refetch } = useUsers()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [editData, setEditData] = useState<Partial<User>>({})
+  const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    const stored = localStorage.getItem("portalUsers")
-    if (stored) {
-      setUsers(JSON.parse(stored))
-    }
-  }, [])
+  if (loading) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background">
+          <Navigation />
+          <main className="max-w-4xl mx-auto px-4 py-8">
+            <div className="text-center">Loading...</div>
+          </main>
+        </div>
+      </AuthGuard>
+    )
+  }
+
+  if (error) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background">
+          <Navigation />
+          <main className="max-w-4xl mx-auto px-4 py-8">
+            <div className="text-center text-red-500">Error: {error}</div>
+          </main>
+        </div>
+      </AuthGuard>
+    )
+  }
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user)
     setEditData(user)
   }
 
-  const handleUpdate = () => {
-    if (!selectedUser) return
+  const handleUpdate = async () => {
+    if (!selectedUser || actionLoading) return
 
-    const updatedUsers = users.map((u) => (u.id === selectedUser.id ? { ...u, ...editData } : u))
-    setUsers(updatedUsers)
-    localStorage.setItem("portalUsers", JSON.stringify(updatedUsers))
-    setSelectedUser(null)
-    setEditData({})
+    try {
+      setActionLoading(true)
+      await updateUser(selectedUser.id, editData)
+      
+      toast.success("User updated successfully", {
+        description: `Information for ${selectedUser.name} has been updated`,
+      })
+      
+      // Refresh the users list and clear selection
+      await refetch()
+      setSelectedUser(null)
+      setEditData({})
+    } catch (error) {
+      toast.error("Failed to update user", {
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+      })
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   return (
@@ -103,9 +138,10 @@ export default function UserManagementPage() {
                     <div className="flex gap-3 pt-4">
                       <Button
                         onClick={handleUpdate}
-                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                        disabled={actionLoading}
+                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Update Information
+                        {actionLoading ? "Updating..." : "Update Information"}
                       </Button>
                       <Button
                         onClick={() => {
@@ -114,6 +150,7 @@ export default function UserManagementPage() {
                         }}
                         variant="outline"
                         className="flex-1"
+                        disabled={actionLoading}
                       >
                         Cancel
                       </Button>
