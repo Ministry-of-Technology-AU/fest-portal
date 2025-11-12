@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    // Get the session
+    const session = await auth()
+    
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { userId, action } = await request.json()
 
     if (!userId || !action) {
@@ -12,9 +23,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Build query based on user role
+    const whereClause = session.user.role === 'admin' 
+      ? { id: userId } // Admins can access any user
+      : { id: userId, festId: session.user.id } // Fest users can only access their own users
+
     // Get current user status
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: whereClause
     })
 
     if (!user) {

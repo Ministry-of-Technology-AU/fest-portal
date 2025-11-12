@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { AuthGuard } from "@/components/auth-guard"
 import { Navigation } from "@/components/navigation"
 import { UserSearch } from "@/components/user-search"
 import { Button } from "@/components/ui/button"
@@ -19,27 +18,23 @@ export default function UserManagementPage() {
 
   if (loading) {
     return (
-      <AuthGuard>
-        <div className="min-h-screen bg-background">
-          <Navigation />
-          <main className="max-w-4xl mx-auto px-4 py-8">
-            <div className="text-center">Loading...</div>
-          </main>
-        </div>
-      </AuthGuard>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <div className="text-center">Loading...</div>
+        </main>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <AuthGuard>
-        <div className="min-h-screen bg-background">
-          <Navigation />
-          <main className="max-w-4xl mx-auto px-4 py-8">
-            <div className="text-center text-red-500">Error: {error}</div>
-          </main>
-        </div>
-      </AuthGuard>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <div className="text-center text-red-500">Error: {error}</div>
+        </main>
+      </div>
     )
   }
 
@@ -83,8 +78,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <Navigation />
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="mb-8">
@@ -172,6 +166,5 @@ export default function UserManagementPage() {
           </Card>
         </main>
       </div>
-    </AuthGuard>
   )
 }

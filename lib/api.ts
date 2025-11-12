@@ -16,7 +16,8 @@ export function useUsers() {
       }
       
       const data = await response.json()
-      setUsers(data)
+      // Handle the new response format with users array and metadata
+      setUsers(data.users || data) // Support both old and new formats
       setError(null)
     } catch (err) {
       console.error('Error fetching users:', err)

@@ -1,48 +1,73 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { AuthGuard } from "@/components/auth-guard"
 import { Navigation } from "@/components/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { User, SecurityStatus } from "@/lib/types"
-import { dummyUsers } from "@/lib/dummy-data"
+import { useUsers } from "@/lib/api"
 
 export default function AdminPage() {
-  const [users, setUsers] = useState<User[]>(dummyUsers)
+  const { users, loading, error, refetch } = useUsers()
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
-  useEffect(() => {
-    const stored = localStorage.getItem("portalUsers")
-    if (stored) {
-      try {
-        const parsedUsers = JSON.parse(stored)
-        // Migrate old data format to new format
-        const migratedUsers = parsedUsers.map((user: any) => ({
-          ...user,
-          currentStatus: user.currentStatus || getStatusFromLegacyFields(user),
-          lastStatusTime: user.lastStatusTime || new Date().toISOString(),
-          statusTrail: user.statusTrail || [
-            {
-              status: user.currentStatus || getStatusFromLegacyFields(user),
-              timestamp: user.lastStatusTime || new Date().toISOString(),
-              source: "system"
-            }
-          ],
-        }))
-        setUsers(migratedUsers)
-      } catch (error) {
-        console.error("Error parsing stored users:", error)
-        setUsers(dummyUsers)
-      }
-    }
-  }, [])
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await refetch()
+    setLastUpdated(new Date())
+    setRefreshing(false)
+  }
 
-  // Helper function to migrate legacy data
-  const getStatusFromLegacyFields = (user: any): SecurityStatus => {
-    if (user.regOutTime) return "reg-out"
-    if (user.regInTime) return "reg-in"
-    if (user.gateInTime) return "gate-in"
-    return "gate-out"
+  // Auto-refresh every 30 seconds
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     if (!refreshing) {
+  //       await refetch()
+  //       setLastUpdated(new Date())
+  //     }
+  //   }, 30000) // 30 seconds
+
+  //   return () => clearInterval(interval)
+  // }, [refreshing, refetch])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading admin dashboard...</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="text-red-500 mb-4">
+              <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-lg font-semibold">Error Loading Dashboard</p>
+              <p className="text-sm text-muted-foreground mt-1">{error}</p>
+            </div>
+            <button 
+              onClick={refetch}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   // Filter users by status
@@ -146,66 +171,39 @@ export default function AdminPage() {
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <Navigation />
         <main className="max-w-7xl mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-foreground">Admin Dashboard</h2>
-            <p className="text-muted-foreground mt-2">Monitor all portal activity and student status</p>
+          <div className="mb-8 flex justify-between items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground">Admin Dashboard</h2>
+              <p className="text-muted-foreground mt-2">Monitor all portal activity and student status</p>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
 
-          {/* Flow Overview */}
-          {/* <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Security Flow Overview</CardTitle>
-              <CardDescription>Gate-Out → Gate-In → Registration-In → Registration-Out → Gate-Out</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-600">OUT</span>
-                    </div>
-                    <p className="text-xs mt-1 text-gray-600">{gateOutUsers.length}</p>
-                  </div>
-                  <div className="text-gray-400">→</div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                      <span className="text-xs font-medium text-green-600">IN</span>
-                    </div>
-                    <p className="text-xs mt-1 text-green-600">{gateInUsers.length}</p>
-                  </div>
-                  <div className="text-gray-400">→</div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                      <span className="text-xs font-medium text-blue-600">REG</span>
-                    </div>
-                    <p className="text-xs mt-1 text-blue-600">{regInUsers.length}</p>
-                  </div>
-                  <div className="text-gray-400">→</div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                      <span className="text-xs font-medium text-purple-600">DONE</span>
-                    </div>
-                    <p className="text-xs mt-1 text-purple-600">{regOutUsers.length}</p>
-                  </div>
-                  <div className="text-gray-400">→</div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-600">OUT</span>
-                    </div>
-                    <p className="text-xs mt-1 text-gray-600">Exit</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-primary">{users.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Students</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card> */}
+          {/* Real-time Status Indicator */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Live data from database</span>
+              <span>•</span>
+              <span>Total: {users.length} students</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+              <span className="ml-2 text-green-600">• Auto-refresh: 30s</span>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">            
 
@@ -214,7 +212,7 @@ export default function AdminPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Inside Gate Not Registered</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-primary">{gateInUsers.length}</div>
+                <div className="text-2xl font-bold text-green-600">{gateInUsers.length}</div>
                 <p className="text-xs text-muted-foreground mt-1">Gate-In</p>
               </CardContent>
             </Card>
@@ -224,7 +222,7 @@ export default function AdminPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Gate In and Registered</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-primary">{regInUsers.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{regInUsers.length}</div>
                 <p className="text-xs text-muted-foreground mt-1">Registration-In</p>
               </CardContent>
             </Card>
@@ -234,7 +232,7 @@ export default function AdminPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Registered Out but Gate In</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-primary">{regOutUsers.length}</div>
+                <div className="text-2xl font-bold text-purple-600">{regOutUsers.length}</div>
                 <p className="text-xs text-muted-foreground mt-1">Registration-Out</p>
               </CardContent>
             </Card>
@@ -301,6 +299,5 @@ export default function AdminPage() {
           </Card>
         </main>
       </div>
-    </AuthGuard>
   )
 }

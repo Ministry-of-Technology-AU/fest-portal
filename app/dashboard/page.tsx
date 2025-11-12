@@ -1,14 +1,12 @@
 "use client"
 
-import { AuthGuard } from "@/components/auth-guard"
 import { Navigation } from "@/components/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 
 export default function DashboardPage() {
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <Navigation />
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="mb-8">
@@ -17,7 +15,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href="/gate-in">
+            <Link href="/fest/gate-in">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Gate-In/Out</CardTitle>
@@ -29,7 +27,7 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/registration">
+            <Link href="/fest/registration">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Registration</CardTitle>
@@ -41,7 +39,7 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/user-management">
+            <Link href="/fest/user-management">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Manage Users</CardTitle>
@@ -53,7 +51,19 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/admin">
+            <Link href="/fest/fest-users">
+              <Card className="cursor-pointer hover:shadow-lg transition h-full">
+                <CardHeader>
+                  <CardTitle className="text-primary">Fest Users</CardTitle>
+                  <CardDescription>Create and manage fest user accounts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Add/remove portal login accounts</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/fest/admin">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Admin Dashboard</CardTitle>
@@ -67,6 +77,5 @@ export default function DashboardPage() {
           </div>
         </main>
       </div>
-    </AuthGuard>
   )
 }

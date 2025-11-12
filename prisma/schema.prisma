@@ -28,17 +28,36 @@ model user {
   visitDates     String             @db.Text
   currentStatus  user_currentStatus @default(gate_out)
   lastStatusTime DateTime           @db.DateTime(0)
+  festId         String             // Foreign key to fest_user
+  fest           fest_user          @relation(fields: [festId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   status_trail   status_trail[]
   user_event     user_event[]
+
+  @@index([festId], map: "festId")
 }
 
 model user_event {
-  userId    String @db.VarChar(6)
+  userId    String    @db.VarChar(6)
   eventId   Int
-  eventName String @db.VarChar(255)
-  user      user   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_event_ibfk_1")
+  eventName String    @db.VarChar(255)
+  festId    String    // Foreign key to fest_user
+  user      user      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_event_ibfk_1")
+  fest      fest_user @relation(fields: [festId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([userId, eventId])
+  @@index([festId], map: "festId_event")
+}
+
+model fest_user {
+  id         String       @id @default(cuid())
+  username   String       @unique @db.VarChar(50)
+  password   String       @db.VarChar(255)
+  email      String       @unique @db.VarChar(255)
+  role       String       @default("fest") @db.VarChar(20)
+  createdAt  DateTime     @default(now()) @db.DateTime(0)
+  updatedAt  DateTime     @updatedAt @db.DateTime(0)
+  users      user[]       // Relation to users
+  user_event user_event[] // Relation to user_events
 }
 
 enum status_trail_status {

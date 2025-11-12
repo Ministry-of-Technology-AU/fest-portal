@@ -1,16 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { auth } from '@/auth'
+import prisma from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    // Get the session
+    const session = await auth()
+    
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { userData } = await request.json()
 
     // Validate required fields
     if (!userData.id || !userData.name || !userData.email || !userData.collegeName || !userData.phoneNumber) {
       return NextResponse.json(
         { error: 'Missing required fields: id, name, email, collegeName, phoneNumber' },
+        { status: 400 }
+      )
+    }
+
+    // For fest users, use their session ID. For admins, they need to specify which fest user
+    let festUserId: string
+    
+    if (session.user.role === 'admin') {
+      // Admins can create users for any fest, but need to specify which fest user
+      const { festUserId: providedFestUserId } = userData
+      if (!providedFestUserId) {
+        return NextResponse.json(
+          { error: 'Admin users must provide festUserId to create users' },
+          { status: 400 }
+        )
+      }
+      festUserId = providedFestUserId
+    } else {
+      // Fest users create users for themselves
+      festUserId = session.user.id
+    }
+
+    // Verify that the fest user exists
+    const festUser = await prisma.fest_user.findUnique({
+      where: { id: festUserId }
+    })
+
+    if (!festUser) {
+      return NextResponse.json(
+        { error: 'Invalid fest user ID' },
         { status: 400 }
       )
     }
@@ -44,8 +83,9 @@ export async function POST(request: NextRequest) {
       visitDates: Array.isArray(userData.visitDates) 
         ? userData.visitDates.join(',') 
         : userData.visitDates || '',
-      currentStatus: 'gate_out',
-      lastStatusTime: now
+      currentStatus: 'gate_out' as const,
+      lastStatusTime: now,
+      festId: festUserId
     }
 
     // Create user and initial status trail in a transaction
@@ -66,9 +106,9 @@ export async function POST(request: NextRequest) {
       prisma.status_trail.create({
         data: {
           userId: userData.id,
-          status: 'gate_out',
+          status: 'gate_out' as const,
           timestamp: now,
-          source: 'system'
+          source: 'system' as const
         }
       })
     ])
@@ -83,7 +123,8 @@ export async function POST(request: NextRequest) {
             data: {
               userId: userData.id,
               eventId: index + 1,
-              eventName: eventName
+              eventName: eventName,
+              festId: festUserId
             }
           })
         )
@@ -114,6 +155,7 @@ export async function POST(request: NextRequest) {
       visitDates: completeUser!.visitDates ? completeUser!.visitDates.split(',') : [],
       currentStatus: completeUser!.currentStatus.replace('_', '-'),
       lastStatusTime: completeUser!.lastStatusTime.toISOString(),
+      festId: completeUser!.festId,
       statusTrail: completeUser!.status_trail.map((trail: any) => ({
         status: trail.status.replace('_', '-'),
         timestamp: trail.timestamp.toISOString(),
@@ -124,7 +166,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'User created successfully',
-      user: transformedUser
+      user: transformedUser,
+      festUser: {
+        id: festUser.id,
+        username: festUser.username,
+        email: festUser.email
+      }
     }, { status: 201 })
 
   } catch (error) {
