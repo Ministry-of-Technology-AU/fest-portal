@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { useState } from "react"
-import { signOut } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
@@ -11,14 +11,16 @@ export function Navigation() {
   const router = useRouter()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const { data: session } = useSession()
+  const userRole = session?.user?.role
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" })
   }
 
   const navigationLinks = [
-    { 
-      href: "/dashboard", 
+    {
+      href: "/dashboard",
       label: "Dashboard",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,8 +28,8 @@ export function Navigation() {
         </svg>
       )
     },
-    { 
-      href: "/gate-in", 
+    {
+      href: "/gate-in",
       label: "Gate-In",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,8 +37,8 @@ export function Navigation() {
         </svg>
       )
     },
-    { 
-      href: "/registration", 
+    {
+      href: "/registration",
       label: "Registration",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,8 +46,8 @@ export function Navigation() {
         </svg>
       )
     },
-    { 
-      href: "/user-management", 
+    {
+      href: "/user-management",
       label: "Manage Users",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,17 +55,18 @@ export function Navigation() {
         </svg>
       )
     },
-    { 
-      href: "/fest-users", 
+    {
+      href: "/fest-users",
       label: "Fest Users",
+      adminOnly: true,
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
         </svg>
       )
     },
-    { 
-      href: "/admin", 
+    {
+      href: "/admin",
       label: "Admin",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,6 +79,11 @@ export function Navigation() {
 
   const closeSheet = () => setIsOpen(false)
 
+  // Filter out admin-only links for non-admin users
+  const filteredLinks = navigationLinks.filter(link =>
+    !link.adminOnly || userRole === 'admin'
+  )
+
   return (
     <nav className="bg-primary text-primary-foreground shadow-md">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -87,17 +95,16 @@ export function Navigation() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
           <div className="flex gap-4">
-            {navigationLinks.map((link) => {
+            {filteredLinks.map((link) => {
               const isActive = pathname === link.href
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`hover:opacity-80 transition-opacity duration-200 px-3 py-2 rounded-md hover:bg-primary-foreground/10 ${
-                    isActive 
-                      ? 'bg-primary-foreground/20 font-semibold' 
-                      : ''
-                  }`}
+                  className={`hover:opacity-80 transition-opacity duration-200 px-3 py-2 rounded-md hover:bg-primary-foreground/10 ${isActive
+                    ? 'bg-primary-foreground/20 font-semibold'
+                    : ''
+                    }`}
                 >
                   {link.label}
                 </Link>
@@ -144,18 +151,17 @@ export function Navigation() {
                 <SheetTitle>Security Portal</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col space-y-2 mt-6">
-                {navigationLinks.map((link) => {
+                {filteredLinks.map((link) => {
                   const isActive = pathname === link.href
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
                       onClick={closeSheet}
-                      className={`flex items-center px-4 py-3 text-base font-medium rounded-lg transition-colors duration-200 border ${
-                        isActive
-                          ? 'bg-primary text-primary-foreground border-primary font-semibold'
-                          : 'text-foreground hover:bg-muted border-transparent hover:border-border'
-                      }`}
+                      className={`flex items-center px-4 py-3 text-base font-medium rounded-lg transition-colors duration-200 border ${isActive
+                        ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                        : 'text-foreground hover:bg-muted border-transparent hover:border-border'
+                        }`}
                     >
                       <span className={`mr-3 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
                         {link.icon}

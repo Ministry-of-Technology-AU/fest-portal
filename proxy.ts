@@ -7,9 +7,9 @@ export async function proxy(request: NextRequest) {
 
   // Public routes that don't require authentication
   const publicRoutes = ['/login', '/api/auth', '/']
-  
+
   // Check if the current path is a public route
-  const isPublicRoute = publicRoutes.some(route => 
+  const isPublicRoute = publicRoutes.some(route =>
     pathname === route || pathname.startsWith(route + '/')
   )
 
@@ -26,11 +26,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Check admin-only routes
-  const isAdminRoute = pathname.includes('/admin')
-  
-  if (isAdminRoute && session.user?.role !== 'admin') {
-    // Redirect non-admin users trying to access admin routes
+  // Check admin-only routes (fest-users management is admin-only)
+  const adminOnlyRoutes = ['/fest-users', '/api/fest-users']
+  const isAdminOnlyRoute = adminOnlyRoutes.some(route =>
+    pathname === route || pathname.startsWith(route + '/')
+  )
+
+  if (isAdminOnlyRoute && session.user?.role !== 'admin') {
+    // Redirect non-admin users trying to access admin-only routes
     const dashboardUrl = new URL('/dashboard', request.url)
     return NextResponse.redirect(dashboardUrl)
   }
