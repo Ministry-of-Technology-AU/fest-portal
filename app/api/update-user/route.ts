@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
+import { sendUserUpdatedEmail } from '@/lib/mail'
 
 export async function PUT(request: NextRequest) {
   try {
     // Get the session
     const session = await auth()
-    
+
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -24,7 +25,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Build query based on user role
-    const whereClause = session.user.role === 'admin' 
+    const whereClause = session.user.role === 'admin'
       ? { id: userId } // Admins can access any user
       : { id: userId, festId: session.user.id } // Fest users can only access their own users
 
@@ -42,14 +43,14 @@ export async function PUT(request: NextRequest) {
 
     // Prepare update data
     const updateData: any = {}
-    
+
     if (userData.name !== undefined) updateData.name = userData.name
     if (userData.collegeName !== undefined) updateData.collegeName = userData.collegeName
     if (userData.email !== undefined) updateData.email = userData.email
     if (userData.phoneNumber !== undefined) updateData.phoneNumber = userData.phoneNumber
     if (userData.visitDates !== undefined) {
-      updateData.visitDates = Array.isArray(userData.visitDates) 
-        ? userData.visitDates.join(',') 
+      updateData.visitDates = Array.isArray(userData.visitDates)
+        ? userData.visitDates.join(',')
         : userData.visitDates
     }
 
@@ -85,6 +86,15 @@ export async function PUT(request: NextRequest) {
       }))
     }
 
+    // Send email notification with user ID (fire and forget)
+    sendUserUpdatedEmail(
+      updatedUser.email,
+      updatedUser.name,
+      updatedUser.id,
+      // Get fest name for email
+      (await prisma.fest_user.findUnique({ where: { id: updatedUser.festId } }))?.username || 'the fest'
+    )
+
     return NextResponse.json({
       success: true,
       message: 'User updated successfully',
@@ -93,7 +103,7 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error('Error updating user:', error)
-    
+
     // Handle unique constraint violations (e.g., duplicate email)
     if (error instanceof Error && error.message.includes('Unique constraint')) {
       return NextResponse.json(
@@ -101,7 +111,7 @@ export async function PUT(request: NextRequest) {
         { status: 409 }
       )
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to update user' },
       { status: 500 }

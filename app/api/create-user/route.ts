@@ -1,12 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+import { sendUserCreatedEmail } from '@/lib/mail'
+
+// Generate a unique 6-character alphanumeric ID
+async function generateUniqueId(): Promise<string> {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let attempts = 0
+  while (attempts < 10) {
+    let id = ''
+    const bytes = randomBytes(6)
+    for (let i = 0; i < 6; i++) {
+      id += chars[bytes[i] % chars.length]
+    }
+    // Check if this ID already exists
+    const existing = await prisma.user.findUnique({ where: { id } })
+    if (!existing) return id
+    attempts++
+  }
+  throw new Error('Failed to generate unique ID after 10 attempts')
+}
 
 export async function POST(request: NextRequest) {
   try {
     // Get the session
     const session = await auth()
-    
+
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -16,17 +36,22 @@ export async function POST(request: NextRequest) {
 
     const { userData } = await request.json()
 
-    // Validate required fields
-    if (!userData.id || !userData.name || !userData.email || !userData.collegeName || !userData.phoneNumber) {
+    // Validate required fields (collegeName is optional)
+    if (!userData.name || !userData.email || !userData.phoneNumber) {
       return NextResponse.json(
-        { error: 'Missing required fields: id, name, email, collegeName, phoneNumber' },
+        { error: 'Missing required fields: name, email, phoneNumber' },
         { status: 400 }
       )
     }
 
+    // Auto-generate ID if not provided
+    if (!userData.id) {
+      userData.id = await generateUniqueId()
+    }
+
     // For fest users, use their session ID. For admins, they need to specify which fest user
     let festUserId: string
-    
+
     if (session.user.role === 'admin') {
       // Admins can create users for any fest, but need to specify which fest user
       const { festUserId: providedFestUserId } = userData
@@ -73,16 +98,24 @@ export async function POST(request: NextRequest) {
 
     const now = new Date()
 
+    // Determine visit dates — auto-set for litfest
+    let visitDates = ''
+    if (userData.visitDates) {
+      visitDates = Array.isArray(userData.visitDates)
+        ? userData.visitDates.join(',')
+        : userData.visitDates
+    } else if (festUser.username.toLowerCase() === 'litfest') {
+      visitDates = '13/02/2026,14/02/2026'
+    }
+
     // Prepare user data
     const createUserData = {
       id: userData.id,
       name: userData.name,
-      collegeName: userData.collegeName,
+      collegeName: userData.collegeName || 'NA',
       email: userData.email,
       phoneNumber: userData.phoneNumber,
-      visitDates: Array.isArray(userData.visitDates) 
-        ? userData.visitDates.join(',') 
-        : userData.visitDates || '',
+      visitDates,
       currentStatus: 'gate_out' as const,
       lastStatusTime: now,
       festId: festUserId
@@ -118,7 +151,7 @@ export async function POST(request: NextRequest) {
     // Create user events if provided
     if (userData.eventsRegistered && Array.isArray(userData.eventsRegistered)) {
       await Promise.all(
-        userData.eventsRegistered.map((eventName: string, index: number) => 
+        userData.eventsRegistered.map((eventName: string, index: number) =>
           prisma.user_event.create({
             data: {
               userId: userData.id,
@@ -163,20 +196,28 @@ export async function POST(request: NextRequest) {
       }))
     }
 
+    // Send welcome email with user ID (fire and forget)
+    sendUserCreatedEmail(
+      userData.email,
+      userData.name,
+      userData.id,
+      festUser!.username
+    )
+
     return NextResponse.json({
       success: true,
       message: 'User created successfully',
       user: transformedUser,
       festUser: {
-        id: festUser.id,
-        username: festUser.username,
-        email: festUser.email
+        id: festUser!.id,
+        username: festUser!.username,
+        email: festUser!.email
       }
     }, { status: 201 })
 
   } catch (error) {
     console.error('Error creating user:', error)
-    
+
     // Handle unique constraint violations
     if (error instanceof Error && error.message.includes('Unique constraint')) {
       return NextResponse.json(
@@ -184,7 +225,7 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       )
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to create user' },
       { status: 500 }
