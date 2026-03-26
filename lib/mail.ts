@@ -1,22 +1,24 @@
-const API_URL = process.env.MAIL_API_URL!
-const TOKEN = process.env.MAIL_API_TOKEN!
+import nodemailer from 'nodemailer'
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
+    },
+})
 
 export async function sendEmail(receiver: string, subject: string, body: string) {
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                receiver,
-                subject,
-                body,
-                auth_token: TOKEN,
-            }),
+        const info = await transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to: receiver,
+            subject,
+            text: body,
         })
 
-        const text = await response.text()
-        console.log('Mail API response:', text)
-        return { success: response.ok, response: text }
+        console.log('Email sent successfully:', info.messageId)
+        return { success: true, response: info.messageId }
     } catch (error) {
         console.error('Failed to send email:', error)
         return { success: false, error }
@@ -42,3 +44,4 @@ export function sendUserUpdatedEmail(email: string, name: string, userId: string
         console.error('Failed to send user updated email:', err)
     )
 }
+
