@@ -42,7 +42,7 @@ export default function GateInPage() {
     try {
       setActionLoading(true)
       await updateGateStatus(selectedUser.id, "gate-in")
-      
+
       toast.success(`Gate-In completed for ${selectedUser.name}`, {
         description: `Student ${selectedUser.id} is now gate-in`,
         style: {
@@ -51,7 +51,7 @@ export default function GateInPage() {
           border: '1px solid #059669'
         }
       })
-      
+
       // Refresh the users list and clear selection
       await refetch()
       setSelectedUser(null)
@@ -75,7 +75,7 @@ export default function GateInPage() {
     try {
       setActionLoading(true)
       await updateGateStatus(selectedUser.id, "gate-out")
-      
+
       toast.success(`Gate-Out completed for ${selectedUser.name}`, {
         description: `Student ${selectedUser.id} is now gate-out`,
         style: {
@@ -84,7 +84,7 @@ export default function GateInPage() {
           border: '1px solid #059669'
         }
       })
-      
+
       // Refresh the users list and clear selection
       await refetch()
       setSelectedUser(null)
@@ -114,91 +114,91 @@ export default function GateInPage() {
 
   return (
     <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-foreground">Gate-In/Out Management</h2>
-            <p className="text-muted-foreground mt-2">Check students in and out at the gate</p>
-          </div>
+      <Navigation />
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-foreground">Gate-In/Out Management</h2>
+          <p className="text-muted-foreground mt-2">Check students in and out at the gate</p>
+        </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Search Student</CardTitle>
-              <CardDescription>Find student by ID or name</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <UserSearch users={users} onSelectUser={setSelectedUser} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Search Student</CardTitle>
+            <CardDescription>Find student by ID or name</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <UserSearch users={users} onSelectUser={setSelectedUser} />
 
-              {selectedUser && (
-                <Card className="bg-muted/50 border-primary/20">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{selectedUser.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Student ID</p>
-                        <p className="font-semibold">{selectedUser.id}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">College</p>
-                        <p className="font-semibold">{selectedUser.collegeName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Email</p>
-                        <p className="font-semibold text-sm">{selectedUser.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Phone</p>
-                        <p className="font-semibold">{selectedUser.phoneNumber}</p>
-                      </div>
+            {selectedUser && (
+              <Card className="bg-muted/50 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-lg">{selectedUser.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Student ID</p>
+                      <p className="font-semibold">{selectedUser.id}</p>
                     </div>
-
-                    {/* Events Registered */}
-                    <div className="bg-secondary/20 p-3 rounded border">
-                      <p className="text-sm text-muted-foreground mb-2">Events Registered</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedUser.eventsRegistered.map((event, index) => (
-                          <span
-                            key={index}
-                            className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-medium"
-                          >
-                            {event}
-                          </span>
-                        ))}
-                      </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">College</p>
+                      <p className="font-semibold">{selectedUser.collegeName}</p>
                     </div>
-
-                    {/* Visit Dates */}
-                    <div className="bg-secondary/20 p-3 rounded border">
-                      <p className="text-sm text-muted-foreground mb-2">Visit Dates</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedUser.visitDates.map((date, index) => (
-                          <span
-                            key={index}
-                            className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md text-xs font-medium"
-                          >
-                            {new Date(date).toLocaleDateString()}
-                          </span>
-                        ))}
-                      </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-semibold text-sm">{selectedUser.email}</p>
                     </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Phone</p>
+                      <p className="font-semibold">{selectedUser.phoneNumber}</p>
+                    </div>
+                  </div>
 
-                    {/* Current Status */}
-                    <div className="bg-secondary/20 p-3 rounded border">
-                      <p className="text-sm text-muted-foreground mb-2">Current Status</p>
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusDisplay(selectedUser.currentStatus).color}`}>
-                          {getStatusDisplay(selectedUser.currentStatus).label}
+                  {/* Events Registered */}
+                  <div className="bg-secondary/20 p-3 rounded border">
+                    <p className="text-sm text-muted-foreground mb-2">Events Registered</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedUser.eventsRegistered.map((event, index) => (
+                        <span
+                          key={index}
+                          className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-medium"
+                        >
+                          {event}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(selectedUser.lastStatusTime).toLocaleString()}
-                        </span>
-                      </div>
+                      ))}
                     </div>
+                  </div>
 
-                    {/* Status Trail */}
-                    {/* <div className="bg-secondary/20 p-3 rounded border">
+                  {/* Visit Dates */}
+                  <div className="bg-secondary/20 p-3 rounded border">
+                    <p className="text-sm text-muted-foreground mb-2">Visit Dates</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedUser.visitDates.map((date, index) => (
+                        <span
+                          key={index}
+                          className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md text-xs font-medium"
+                        >
+                          {date}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Current Status */}
+                  <div className="bg-secondary/20 p-3 rounded border">
+                    <p className="text-sm text-muted-foreground mb-2">Current Status</p>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusDisplay(selectedUser.currentStatus).color}`}>
+                        {getStatusDisplay(selectedUser.currentStatus).label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(selectedUser.lastStatusTime).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Status Trail */}
+                  {/* <div className="bg-secondary/20 p-3 rounded border">
                       <p className="text-sm text-muted-foreground mb-2">Status History ({selectedUser.statusTrail.length} entries)</p>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
                         {selectedUser.statusTrail.slice().reverse().slice(0, 5).map((entry, index) => (
@@ -222,8 +222,8 @@ export default function GateInPage() {
                       </div>
                     </div> */}
 
-                    {/* Next Available Actions */}
-                    {/* <div className="bg-secondary/20 p-3 rounded border">
+                  {/* Next Available Actions */}
+                  {/* <div className="bg-secondary/20 p-3 rounded border">
                       <p className="text-sm text-muted-foreground mb-2">Available Actions</p>
                       <div className="flex flex-wrap gap-2">
                         {getNextActions(selectedUser.currentStatus).map((action) => (
@@ -237,28 +237,28 @@ export default function GateInPage() {
                       </div>
                     </div> */}
 
-                    <div className="flex gap-3 pt-4">
-                      <Button
-                        onClick={handleGateIn}
-                        disabled={actionLoading}
-                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {actionLoading ? "Updating..." : "Gate-In"}
-                      </Button>
-                      <Button
-                        onClick={handleGateOut}
-                        disabled={actionLoading}
-                        className="flex-1 bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {actionLoading ? "Updating..." : "Gate-Out"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      onClick={handleGateIn}
+                      disabled={actionLoading}
+                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoading ? "Updating..." : "Gate-In"}
+                    </Button>
+                    <Button
+                      onClick={handleGateOut}
+                      disabled={actionLoading}
+                      className="flex-1 bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoading ? "Updating..." : "Gate-Out"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+    </div>
   )
 }
