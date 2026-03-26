@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       prisma.user.create({
         data: createUserData,
         include: {
-          user_event: true,
+          events: true,
           status_trail: {
             orderBy: {
               timestamp: 'desc'
@@ -148,27 +148,34 @@ export async function POST(request: NextRequest) {
 
     const newUser = result[0]
 
-    // Create user events if provided
+    // Create or connect user events if provided
     if (userData.eventsRegistered && Array.isArray(userData.eventsRegistered)) {
-      await Promise.all(
-        userData.eventsRegistered.map((eventName: string, index: number) =>
-          prisma.user_event.create({
-            data: {
-              userId: userData.id,
-              eventId: index + 1,
-              eventName: eventName,
-              festId: festUserId
-            }
-          })
-        )
-      )
+      await prisma.user.update({
+        where: { id: userData.id },
+        data: {
+          events: {
+            connectOrCreate: userData.eventsRegistered.map((eventName: string) => ({
+              where: {
+                name_festId: {
+                  name: eventName,
+                  festId: festUserId
+                }
+              },
+              create: {
+                name: eventName,
+                festId: festUserId
+              }
+            }))
+          }
+        }
+      });
     }
 
     // Fetch the complete user data with events
     const completeUser = await prisma.user.findUnique({
       where: { id: userData.id },
       include: {
-        user_event: true,
+        events: true,
         status_trail: {
           orderBy: {
             timestamp: 'desc'
@@ -184,7 +191,7 @@ export async function POST(request: NextRequest) {
       collegeName: completeUser!.collegeName,
       email: completeUser!.email,
       phoneNumber: completeUser!.phoneNumber,
-      eventsRegistered: completeUser!.user_event.map((event: any) => event.eventName),
+      eventsRegistered: completeUser!.events.map((event: any) => event.name),
       visitDates: completeUser!.visitDates ? completeUser!.visitDates.split(',') : [],
       currentStatus: completeUser!.currentStatus.replace('_', '-'),
       lastStatusTime: completeUser!.lastStatusTime.toISOString(),

@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest) {
       where: { id: userId },
       data: updateData,
       include: {
-        user_event: true,
+        events: true,
         status_trail: {
           orderBy: {
             timestamp: 'desc'
@@ -68,18 +68,67 @@ export async function PUT(request: NextRequest) {
       }
     })
 
+    // Update events if provided
+    if (userData.eventsRegistered && Array.isArray(userData.eventsRegistered)) {
+      // First disconnect all existing events
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          events: {
+            set: [] // Clear existing connections
+          }
+        }
+      })
+
+      // Then connect/create the new list
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          events: {
+            connectOrCreate: userData.eventsRegistered.map((eventName: string) => ({
+              where: {
+                name_festId: {
+                  name: eventName,
+                  festId: updatedUser.festId
+                }
+              },
+              create: {
+                name: eventName,
+                festId: updatedUser.festId
+              }
+            }))
+          }
+        }
+      })
+    }
+
+    // Fetch the final user with updated events for the response
+    const finalUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        events: true,
+        status_trail: {
+          orderBy: {
+            timestamp: 'desc'
+          }
+        }
+      }
+    })
+
+    if (!finalUser) throw new Error('User not found after update')
+
     // Transform the data to match frontend interface
     const transformedUser = {
-      id: updatedUser.id,
-      name: updatedUser.name,
-      collegeName: updatedUser.collegeName,
-      email: updatedUser.email,
-      phoneNumber: updatedUser.phoneNumber,
-      eventsRegistered: updatedUser.user_event.map((event: any) => event.eventName),
-      visitDates: updatedUser.visitDates.split(','),
-      currentStatus: updatedUser.currentStatus.replace('_', '-'),
-      lastStatusTime: updatedUser.lastStatusTime.toISOString(),
-      statusTrail: updatedUser.status_trail.map((trail: any) => ({
+      id: finalUser.id,
+      name: finalUser.name,
+      collegeName: finalUser.collegeName,
+      email: finalUser.email,
+      phoneNumber: finalUser.phoneNumber,
+      eventsRegistered: finalUser.events.map((event: any) => event.name),
+      visitDates: finalUser.visitDates.split(','),
+      currentStatus: finalUser.currentStatus.replace('_', '-'),
+      lastStatusTime: finalUser.lastStatusTime.toISOString(),
+      statusTrail: finalUser.status_trail.map((trail: any) => ({
         status: trail.status.replace('_', '-'),
         timestamp: trail.timestamp.toISOString(),
         source: trail.source
@@ -88,11 +137,11 @@ export async function PUT(request: NextRequest) {
 
     // Send email notification with user ID (fire and forget)
     sendUserUpdatedEmail(
-      updatedUser.email,
-      updatedUser.name,
-      updatedUser.id,
+      finalUser.email,
+      finalUser.name,
+      finalUser.id,
       // Get fest name for email
-      (await prisma.fest_user.findUnique({ where: { id: updatedUser.festId } }))?.username || 'the fest'
+      (await prisma.fest_user.findUnique({ where: { id: finalUser.festId } }))?.username || 'the fest'
     )
 
     return NextResponse.json({

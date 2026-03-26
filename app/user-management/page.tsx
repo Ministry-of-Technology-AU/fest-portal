@@ -11,6 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import type { User } from "@/lib/types"
 import { useUsers, updateUser } from "@/lib/api"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function UserManagementPage() {
   const { users, loading, error, refetch } = useUsers()
@@ -24,7 +27,28 @@ export default function UserManagementPage() {
     email: '',
     phoneNumber: '',
     collegeName: '',
+    eventsRegistered: [] as string[],
   })
+  const [availableEvents, setAvailableEvents] = useState<string[]>([])
+  const [fetchingEvents, setFetchingEvents] = useState(false)
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setFetchingEvents(true)
+        const response = await fetch('/api/events')
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableEvents(data.events.map((e: any) => e.name))
+        }
+      } catch (error) {
+        console.error('Failed to fetch events:', error)
+      } finally {
+        setFetchingEvents(false)
+      }
+    }
+    fetchEvents()
+  }, [])
 
   if (loading) {
     return (
@@ -101,6 +125,7 @@ export default function UserManagementPage() {
             email: newUserData.email,
             phoneNumber: newUserData.phoneNumber,
             collegeName: newUserData.collegeName || undefined,
+            eventsRegistered: newUserData.eventsRegistered,
           }
         }),
       })
@@ -116,7 +141,7 @@ export default function UserManagementPage() {
             border: '1px solid #059669'
           }
         })
-        setNewUserData({ name: '', email: '', phoneNumber: '', collegeName: '' })
+        setNewUserData({ name: '', email: '', phoneNumber: '', collegeName: '', eventsRegistered: [] })
         setIsAddOpen(false)
         await refetch()
       } else {
@@ -197,6 +222,77 @@ export default function UserManagementPage() {
                     required
                   />
                 </div>
+                <div>
+                  <Label className="mb-2 block">Register for Events</Label>
+                  <Card className="border p-0">
+                    <ScrollArea className="h-[150px] p-2">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {availableEvents.length > 0 ? (
+                          availableEvents.map((event) => (
+                            <div key={event} className="flex items-center space-x-2 p-1">
+                              <Checkbox 
+                                id={`new-event-${event}`} 
+                                checked={newUserData.eventsRegistered.includes(event)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setNewUserData(prev => ({ ...prev, eventsRegistered: [...prev.eventsRegistered, event] }))
+                                  } else {
+                                    setNewUserData(prev => ({ ...prev, eventsRegistered: prev.eventsRegistered.filter(e => e !== event) }))
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor={`new-event-${event}`}
+                                className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                {event}
+                              </label>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-full p-2 text-center text-xs text-muted-foreground italic">
+                            {fetchingEvents ? 'Loading events...' : 'No events found. Type below to add manual ones.'}
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </Card>
+                  
+                  <div className="mt-2">
+                    <Label htmlFor="new-manual-event" className="text-[10px] text-muted-foreground">Add Custom Event</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        id="new-manual-event"
+                        placeholder="Type event name..."
+                        className="h-8 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = (e.currentTarget as HTMLInputElement).value.trim();
+                            if (val && !newUserData.eventsRegistered.includes(val)) {
+                              setNewUserData(prev => ({ ...prev, eventsRegistered: [...prev.eventsRegistered, val] }));
+                              (e.currentTarget as HTMLInputElement).value = '';
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1 mt-3">
+                    {newUserData.eventsRegistered.map(event => (
+                      <Badge key={event} variant="secondary" className="text-[10px] pr-1">
+                        {event}
+                        <button 
+                          className="ml-1 hover:text-destructive"
+                          onClick={() => setNewUserData(prev => ({ ...prev, eventsRegistered: prev.eventsRegistered.filter(e => e !== event) }))}
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
                     Cancel
@@ -260,6 +356,60 @@ export default function UserManagementPage() {
                         onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
                         className="mt-1"
                       />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-sm font-medium mb-2 block">Events Registered</label>
+                      <Card className="border p-0 mb-3">
+                        <ScrollArea className="h-[150px] p-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {availableEvents.length > 0 ? (
+                              availableEvents.map((event) => (
+                                <div key={event} className="flex items-center space-x-2 p-1">
+                                  <Checkbox 
+                                    id={`edit-event-${event}`} 
+                                    checked={editData.eventsRegistered?.includes(event) || false}
+                                    onCheckedChange={(checked) => {
+                                      const current = editData.eventsRegistered || [];
+                                      if (checked) {
+                                        setEditData({ ...editData, eventsRegistered: [...current, event] })
+                                      } else {
+                                        setEditData({ ...editData, eventsRegistered: current.filter((e: string) => e !== event) })
+                                      }
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor={`edit-event-${event}`}
+                                    className="text-sm font-medium leading-none cursor-pointer"
+                                  >
+                                    {event}
+                                  </label>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="col-span-full p-2 text-center text-xs text-muted-foreground italic">
+                                {fetchingEvents ? 'Loading events...' : 'No existing events found.'}
+                              </div>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </Card>
+
+                      <div className="flex flex-wrap gap-1">
+                        {editData.eventsRegistered?.map((event: string) => (
+                          <Badge key={event} variant="secondary" className="pr-1">
+                            {event}
+                            <button 
+                              className="ml-1 hover:text-destructive"
+                              onClick={() => {
+                                const current = editData.eventsRegistered || [];
+                                setEditData({ ...editData, eventsRegistered: current.filter((e: string) => e !== event) })
+                              }}
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

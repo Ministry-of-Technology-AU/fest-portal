@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const users = await prisma.user.findMany({
       where: whereClause,
       include: {
-        user_event: true,
+        events: true,
         status_trail: {
           orderBy: {
             timestamp: 'desc'
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       collegeName: user.collegeName,
       email: user.email,
       phoneNumber: user.phoneNumber,
-      eventsRegistered: user.user_event.map((event: any) => event.eventName),
+      eventsRegistered: user.events.map((event: any) => event.name),
       visitDates: user.visitDates ? user.visitDates.split(',') : [], // Handle null visitDates
       currentStatus: user.currentStatus.replace('_', '-'), // Convert snake_case to kebab-case
       lastStatusTime: user.lastStatusTime.toISOString(),
