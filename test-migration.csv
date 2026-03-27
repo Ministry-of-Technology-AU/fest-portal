@@ -1,0 +1,6 @@
+Name,Phone Number,Email ID,College,Competitions,isDone
+Test User 1,919876543210,soham.tulsyan_ug2023@ashoka.edu.in,Test College A,"Seminar, Economic Milestones",true
+Test User 2,919876543211,soham.tulsyan_ug2023+test2@ashoka.edu.in,Test College B,FIFA,true
+Test User 3,919876543212,soham.tulsyan_ug2023+test3@ashoka.edu.in,Test College C,"Bodhi Stock Exchange, Dominion",true
+Test User 4,919876543213,soham.tulsyan_ug2023+test4@ashoka.edu.in,Test College D,MarketCraft,true
+Test User 5,919876543214,soham.tulsyan_ug2023+test5@ashoka.edu.in,Test College E,"Seminar, PolicyGPT",true
