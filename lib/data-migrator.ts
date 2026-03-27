@@ -7,7 +7,7 @@ import { sendUserCreatedEmail } from './mail';
 import { randomBytes } from 'crypto';
 
 const FEST_ID = 'cmmytqgyv0000ju04rarqswxb';
-const CSV_PATH = path.join(process.cwd(), 'test-migration.csv');
+const CSV_PATH = path.join(process.cwd(), 'EQ REGN MASTERSHEET 2026 - Mastersheet.csv');
 
 
 // Reusing generating logic from app/api/create-user/route.ts
@@ -82,7 +82,7 @@ async function migrate() {
       const competitionsStr = record.Competitions || '';
       // Competitions are comma separated, e.g., "Seminar, Economic Milestones, Bodhi Stock Exchange, FIFA"
       const competitions = competitionsStr.split(',').map((s: string) => s.trim());
-      
+
       const eventIdsToConnect = competitions
         .map((name: string) => eventMap[name.toLowerCase()])
         .filter((id: number | undefined) => id !== undefined)
@@ -131,10 +131,10 @@ async function migrate() {
       // Mark as done in memory
       record.isDone = 'true';
       console.log(`   -> Successfully migrated ${record.Name} with ID ${userId}`);
-      
+
       // Optional: small delay to avoid overwhelming SMTP if needed
       // await new Promise(resolve => setTimeout(resolve, 50));
-      
+
     } catch (error) {
       console.error(`   -> Failed to migrate ${record.Name}:`, error);
     }
