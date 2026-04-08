@@ -3,6 +3,7 @@ import path from 'path'
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    pool: true, // Reuse connections to avoid Gmail flagging frequent new connections
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,

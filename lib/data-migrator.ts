@@ -7,7 +7,7 @@ import { sendUserCreatedEmail } from './mail';
 import { randomBytes } from 'crypto';
 
 const FEST_ID = 'cmmytqgyv0000ju04rarqswxb';
-const CSV_PATH = path.join(process.cwd(), 'EQ REGN MASTERSHEET 2026 - Mastersheet.csv');
+const CSV_PATH = path.join(process.cwd(), 'UPDATED EQ REGNS - Sheet1.csv');
 
 
 // Reusing generating logic from app/api/create-user/route.ts
@@ -46,7 +46,6 @@ async function migrate() {
   });
   const eventMap: Record<string, number> = {};
   events.forEach(e => {
-    // Trim and lowercase for better matching
     eventMap[e.name.trim().toLowerCase()] = e.id;
   });
 
@@ -58,16 +57,22 @@ async function migrate() {
   const records = parse(fileContent, {
     columns: true,
     skip_empty_lines: true,
-    relax_column_count: true, // Handle cases where isDone column is missing in some rows
+    relax_column_count: true,
   }) as CSVRecord[];
 
-  const processedRecords = [];
-  const emailPromises: Promise<any>[] = [];
+  const processedRecords: CSVRecord[] = [];
   let count = 0;
 
   for (const record of records) {
-    // Check if already processed
+    // Skip if already marked done in CSV
     if (record.isDone === 'true' || record.isDone === true || record.isDone === 'TRUE') {
+      processedRecords.push(record);
+      continue;
+    }
+
+    // Skip Ashoka University students
+    if (record.College && record.College.toLowerCase().includes('ashoka')) {
+      console.log(`   Skipping ${record.Name} (Ashoka University)`);
       processedRecords.push(record);
       continue;
     }
@@ -75,14 +80,21 @@ async function migrate() {
     try {
       console.log(`[${++count}] Processing user: ${record.Name} (${record['Email ID']})`);
 
+      // Safe re-run: check if user already exists in DB by email before doing anything
+      const existing = await prisma.user.findUnique({ where: { email: record['Email ID'] } });
+      if (existing) {
+        console.log(`   -> Already in DB (ID: ${existing.id}), skipping insert.`);
+        record.isDone = 'true';
+        processedRecords.push(record);
+        continue;
+      }
+
       // Generate a unique 6-character alphanumeric ID
       const userId = await generateUniqueId();
 
       // Map competitions to event IDs
       const competitionsStr = record.Competitions || '';
-      // Competitions are comma separated, e.g., "Seminar, Economic Milestones, Bodhi Stock Exchange, FIFA"
       const competitions = competitionsStr.split(',').map((s: string) => s.trim());
-
       const eventIdsToConnect = competitions
         .map((name: string) => eventMap[name.toLowerCase()])
         .filter((id: number | undefined) => id !== undefined)
@@ -90,7 +102,7 @@ async function migrate() {
 
       const now = new Date();
 
-      // Database transaction: Create user and initial status trail
+      // 1. Create user + initial status trail in a transaction
       await prisma.$transaction([
         prisma.user.create({
           data: {
@@ -103,37 +115,36 @@ async function migrate() {
             currentStatus: 'gate_out',
             lastStatusTime: now,
             festId: FEST_ID,
-            events: {
-              connect: eventIdsToConnect
-            }
+            emailSent: false,
+            events: { connect: eventIdsToConnect }
           }
         }),
         prisma.status_trail.create({
-          data: {
-            userId: userId,
-            status: 'gate_out',
-            timestamp: now,
-            source: 'system'
-          }
+          data: { userId, status: 'gate_out', timestamp: now, source: 'system' }
         })
       ]);
 
-      // Fire-and-forget email — collect promise to drain later
-      emailPromises.push(
-        sendUserCreatedEmail(
-          record['Email ID'],
-          record.Name,
-          userId,
-          festUser?.username || 'Fest'
-        ).catch(err => console.error(`   -> Failed to send email to ${record['Email ID']}:`, err))
+      // 2. Send email sequentially — await before moving to next user
+      console.log(`   -> Sending email to ${record['Email ID']}...`);
+      const emailRes = await sendUserCreatedEmail(
+        record['Email ID'],
+        record.Name,
+        userId,
+        festUser?.username || 'Fest'
       );
 
-      // Mark as done in memory
-      record.isDone = 'true';
-      console.log(`   -> Successfully migrated ${record.Name} with ID ${userId}`);
+      if (emailRes.success) {
+        await prisma.user.update({ where: { id: userId }, data: { emailSent: true } });
+        console.log(`   -> Email sent!`);
+      } else {
+        console.error(`   -> Email failed (user still created, can retry via resend script):`, emailRes.error);
+      }
 
-      // Optional: small delay to avoid overwhelming SMTP if needed
-      // await new Promise(resolve => setTimeout(resolve, 50));
+      record.isDone = 'true';
+      console.log(`   -> Migrated ${record.Name} with ID ${userId}`);
+
+      // 2500ms gap — keeps us well within Gmail's rate limits (~25 min for 600 users)
+      await new Promise(resolve => setTimeout(resolve, 2500));
 
     } catch (error) {
       console.error(`   -> Failed to migrate ${record.Name}:`, error);
@@ -141,15 +152,10 @@ async function migrate() {
     processedRecords.push(record);
   }
 
-  // 3. Update CSV file with isDone status
+  // 3. Write updated CSV
   const updatedCsv = stringify(processedRecords, { header: true });
   fs.writeFileSync(CSV_PATH, updatedCsv);
-  console.log(`\nDB migration completed. Total new users processed: ${count}`);
-
-  // 4. Wait for all background emails to finish before exiting
-  console.log(`Waiting for ${emailPromises.length} emails to send...`);
-  await Promise.allSettled(emailPromises);
-  console.log('All emails processed.');
+  console.log(`\nMigration complete. Total new users processed: ${count}`);
 }
 
 migrate()
