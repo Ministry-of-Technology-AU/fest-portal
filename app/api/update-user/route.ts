@@ -48,6 +48,7 @@ export async function PUT(request: NextRequest) {
     if (userData.collegeName !== undefined) updateData.collegeName = userData.collegeName
     if (userData.email !== undefined) updateData.email = userData.email
     if (userData.phoneNumber !== undefined) updateData.phoneNumber = userData.phoneNumber
+    if (userData.additionalParams !== undefined) updateData.additionalParams = userData.additionalParams
     if (userData.visitDates !== undefined) {
       updateData.visitDates = Array.isArray(userData.visitDates)
         ? userData.visitDates.join(',')

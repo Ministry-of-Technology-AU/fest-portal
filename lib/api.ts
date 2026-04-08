@@ -56,13 +56,13 @@ export async function updateGateStatus(userId: string, action: 'gate-in' | 'gate
   return response.json()
 }
 
-export async function updateRegistrationStatus(userId: string, action: 'reg-in' | 'reg-out') {
+export async function updateRegistrationStatus(userId: string, action: 'reg-in' | 'reg-out', additionalParams?: Record<string, unknown>) {
   const response = await fetch('/api/registration', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ userId, action }),
+    body: JSON.stringify({ userId, action, additionalParams }),
   })
 
   if (!response.ok) {

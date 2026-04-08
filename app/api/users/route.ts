@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         currentStatus: user.currentStatus.replace('_', '-'), // Convert snake_case to kebab-case
         lastStatusTime: user.lastStatusTime.toISOString(),
         festId: user.festId,
+        additionalParams: user.additionalParams ?? undefined,
         statusTrail: user.status_trail.map((trail: any) => ({
           status: trail.status.replace('_', '-'),
           timestamp: trail.timestamp.toISOString(),

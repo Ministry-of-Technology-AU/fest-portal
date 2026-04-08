@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { userId, action } = await request.json()
+    const { userId, action, additionalParams } = await request.json()
 
     if (!userId || !action) {
       return NextResponse.json(
@@ -73,7 +73,8 @@ export async function POST(request: NextRequest) {
         where: { id: userId },
         data: {
           currentStatus: newStatus as any,
-          lastStatusTime: now
+          lastStatusTime: now,
+          ...(action === 'reg-in' && additionalParams ? { additionalParams } : {})
         }
       }),
       // Create trail entry

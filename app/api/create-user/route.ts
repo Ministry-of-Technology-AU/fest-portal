@@ -79,19 +79,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user with this ID or email already exists
+    // Check if user with this ID already exists (globally) or email exists within this fest
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
           { id: userData.id },
-          { email: userData.email }
+          { email: userData.email, festId: festUserId }
         ]
       }
     })
 
     if (existingUser) {
       return NextResponse.json(
-        { error: existingUser.id === userData.id ? 'User ID already exists' : 'Email already exists' },
+        { error: existingUser.id === userData.id ? 'User ID already exists' : 'Email already registered for this fest' },
         { status: 409 }
       )
     }

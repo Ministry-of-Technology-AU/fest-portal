@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import { useSession } from "next-auth/react"
 import { Navigation } from "@/components/navigation"
 import { UserSearch } from "@/components/user-search"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function UserManagementPage() {
   const { users, loading, error, refetch } = useUsers()
+  const { data: session } = useSession()
+  const isBanjaara = session?.user?.name === "banjaara"
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [editData, setEditData] = useState<Partial<User>>({})
   const [actionLoading, setActionLoading] = useState(false)
@@ -412,6 +415,40 @@ export default function UserManagementPage() {
                       </div>
                     </div>
                   </div>
+
+                  {isBanjaara && (
+                    <div className="col-span-2">
+                      <label className="text-sm font-medium mb-2 block">Banjaara Details</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="edit-band" className="text-sm">Band Number</Label>
+                          <Input
+                            id="edit-band"
+                            className="mt-1"
+                            placeholder="e.g. 2"
+                            value={(editData.additionalParams?.bandNumber as string) ?? ""}
+                            onChange={(e) => setEditData({
+                              ...editData,
+                              additionalParams: { ...editData.additionalParams, bandNumber: e.target.value }
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-desk" className="text-sm">Desk Number</Label>
+                          <Input
+                            id="edit-desk"
+                            className="mt-1"
+                            placeholder="e.g. 5"
+                            value={(editData.additionalParams?.deskNumber as string) ?? ""}
+                            onChange={(e) => setEditData({
+                              ...editData,
+                              additionalParams: { ...editData.additionalParams, deskNumber: e.target.value }
+                            })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-3 pt-4">
                     <Button

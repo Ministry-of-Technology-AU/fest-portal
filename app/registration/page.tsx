@@ -2,17 +2,36 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { useSession } from "next-auth/react"
 import { Navigation } from "@/components/navigation"
 import { UserSearch } from "@/components/user-search"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import type { User, SecurityStatus } from "@/lib/types"
 import { useUsers, updateRegistrationStatus } from "@/lib/api"
 
 export default function RegistrationPage() {
   const { users, loading, error, refetch } = useUsers()
+  const { data: session } = useSession()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [bandNumber, setBandNumber] = useState("")
+  const [deskNumber, setDeskNumber] = useState("")
+
+  const isBanjaara = session?.user?.name === "banjaara"
+
+  const handleSelectUser = (user: User | null) => {
+    setSelectedUser(user)
+    if (isBanjaara && user?.additionalParams) {
+      setBandNumber((user.additionalParams.bandNumber as string) ?? "")
+      setDeskNumber((user.additionalParams.deskNumber as string) ?? "")
+    } else {
+      setBandNumber("")
+      setDeskNumber("")
+    }
+  }
 
   if (loading) {
     return (
@@ -39,9 +58,17 @@ export default function RegistrationPage() {
   const handleRegIn = async () => {
     if (!selectedUser || actionLoading) return
 
+    if (isBanjaara && (!bandNumber.trim() || !deskNumber.trim())) {
+      toast.error("Band number and desk number are required")
+      return
+    }
+
     try {
       setActionLoading(true)
-      await updateRegistrationStatus(selectedUser.id, "reg-in")
+      const additionalParams = isBanjaara
+        ? { bandNumber: bandNumber.trim(), deskNumber: deskNumber.trim() }
+        : undefined
+      await updateRegistrationStatus(selectedUser.id, "reg-in", additionalParams)
 
       toast.success(`Registration-In completed for ${selectedUser.name}`, {
         description: `Student ${selectedUser.id} is now registered-in`,
@@ -55,6 +82,8 @@ export default function RegistrationPage() {
       // Refresh the users list and clear selection
       await refetch()
       setSelectedUser(null)
+      setBandNumber("")
+      setDeskNumber("")
     } catch (error) {
       toast.error("Failed to update status", {
         description: error instanceof Error ? error.message : "Unknown error occurred",
@@ -127,7 +156,7 @@ export default function RegistrationPage() {
             <CardDescription>Find student by ID or name</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <UserSearch users={users} onSelectUser={setSelectedUser} />
+            <UserSearch users={users} onSelectUser={handleSelectUser} />
 
             {selectedUser && (
               <Card className="bg-muted/50 border-primary/20">
@@ -236,6 +265,32 @@ export default function RegistrationPage() {
                         ))}
                       </div>
                     </div> */}
+
+                  {isBanjaara && (
+                    <div className="bg-secondary/20 p-3 rounded border space-y-3">
+                      <p className="text-sm text-muted-foreground font-medium">Banjaara Registration Details</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="bandNumber" className="text-sm">Band Number</Label>
+                          <Input
+                            id="bandNumber"
+                            placeholder="e.g. 2"
+                            value={bandNumber}
+                            onChange={(e) => setBandNumber(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="deskNumber" className="text-sm">Desk Number</Label>
+                          <Input
+                            id="deskNumber"
+                            placeholder="e.g. 5"
+                            value={deskNumber}
+                            onChange={(e) => setDeskNumber(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-3 pt-4">
                     <Button

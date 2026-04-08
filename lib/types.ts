@@ -17,6 +17,7 @@ export interface User {
   currentStatus: SecurityStatus
   lastStatusTime: string
   statusTrail: StatusTrailEntry[]
+  additionalParams?: Record<string, unknown>
   // Legacy fields - keeping for backward compatibility
   gateInTime?: string
   gateOutTime?: string

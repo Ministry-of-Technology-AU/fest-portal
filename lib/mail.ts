@@ -2,43 +2,43 @@ import nodemailer from 'nodemailer'
 import path from 'path'
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    pool: true, // Reuse connections to avoid Gmail flagging frequent new connections
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-    },
+  service: 'gmail',
+  pool: true, // Reuse connections to avoid Gmail flagging frequent new connections
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
+  },
 })
 
 // Define the static attachments
 const ATTACHMENTS = [
-    {
-        filename: 'General Guidelines + Security Protocols.pdf',
-        path: path.join(process.cwd(), 'public', 'EXTERNALS -  General Guidelines + Security Protocols.pdf')
-    },
-    {
-        filename: 'Transport schedule - EQ 4.0.pdf',
-        path: path.join(process.cwd(), 'public', 'Transport schedule - EQ 4.0.pdf')
-    }
+  {
+    filename: 'General Guidelines + Security Protocols.pdf',
+    path: path.join(process.cwd(), 'public', 'EXTERNALS -  General Guidelines + Security Protocols.pdf')
+  },
+  {
+    filename: 'Transport schedule - EQ 4.0.pdf',
+    path: path.join(process.cwd(), 'public', 'Transport schedule - EQ 4.0.pdf')
+  }
 ]
 
 export async function sendEmail(receiver: string, subject: string, body: string, html?: string) {
-    try {
-        const info = await transporter.sendMail({
-            from: `"Equilibrium 4.0" <${process.env.SMTP_USER}>`,
-            to: receiver,
-            subject,
-            text: body,
-            html: html || undefined,
-            attachments: ATTACHMENTS,
-        })
+  try {
+    const info = await transporter.sendMail({
+      from: `"Banjaara 2026" <${process.env.SMTP_USER}>`,
+      to: receiver,
+      subject,
+      text: body,
+      html: html || undefined,
+      // attachments: ATTACHMENTS,
+    })
 
-        console.log('Email sent successfully:', info.messageId)
-        return { success: true, response: info.messageId }
-    } catch (error) {
-        console.error('Failed to send email:', error)
-        return { success: false, error }
-    }
+    console.log('Email sent successfully:', info.messageId)
+    return { success: true, response: info.messageId }
+  } catch (error) {
+    console.error('Failed to send email:', error)
+    return { success: false, error }
+  }
 }
 
 
@@ -163,33 +163,33 @@ const HTML_TEMPLATE = `
 `
 
 export async function sendUserCreatedEmail(email: string, name: string, userId: string, festName: string) {
-    const subject = `Welcome to Equilibrium 4.0 — Your Registration ID`
-    const body = `Hi ${name},\n\nYou have been successfully registered for Equilibrium 4.0!\n\nYour User ID: ${userId}\n\nPlease keep this ID safe — you will need it for gate entry and event registration.\n\nSee you at the fest!`
+  const subject = `Welcome to Banjaara 2026 — Your Registration ID`
+  const body = `Hi ${name},\n\nYou have been successfully registered for Banjaara 2026!\n\nYour User ID: ${userId}\n\nPlease keep this ID safe — you will need it for gate entry and event registration.\n\nSee you at the fest!`
 
-    const html = HTML_TEMPLATE
-        .replace('{{TITLE}}', 'Registration Confirmed!')
-        .replace('{{SUBTITLE}}', 'We are excited to have you at <b>Equilibrium 4.0</b>!')
-        .replace('{{UNIQUE_ID}}', userId)
-        .replace('{{USER_NAME}}', name)
-        .replace('{{MESSAGE}}', 'Your registration for the event has been successfully processed. Please present the ID above at the check-in counter on the day of the event. <b>PFA the transport schedule and the general guidelines for Equilibrium 4.0.</b>')
+  const html = HTML_TEMPLATE
+    .replace('{{TITLE}}', 'Registration Confirmed!')
+    .replace('{{SUBTITLE}}', 'We are excited to have you at <b>Banjaara 2026</b>!')
+    .replace('{{UNIQUE_ID}}', userId)
+    .replace('{{USER_NAME}}', name)
+    .replace('{{MESSAGE}}', 'Your registration for the event has been successfully processed. Please present the ID above at the check-in counter on the day of the event. <b>PFA the transport schedule and the general guidelines for Banjaara 2026</b>')
 
-    // Return the promise so it can be awaited if needed
-    return sendEmail(email, subject, body, html)
+  // Return the promise so it can be awaited if needed
+  return sendEmail(email, subject, body, html)
 }
 
 export async function sendUserUpdatedEmail(email: string, name: string, userId: string, festName: string) {
-    const subject = `Equilibrium 4.0 — Your Information Has Been Updated`
-    const body = `Hi ${name},\n\nYour registration information for Equilibrium 4.0 has been updated.\n\nYour User ID: ${userId}\n\nIf you did not request this change, please contact the fest organizers.\n\nSee you at the fest!`
+  const subject = `Banjaara 2026 — Your Information Has Been Updated`
+  const body = `Hi ${name},\n\nYour registration information for Banjaara 2026 has been updated.\n\nYour User ID: ${userId}\n\nIf you did not request this change, please contact the fest organizers.\n\nSee you at the fest!`
 
-    const html = HTML_TEMPLATE
-        .replace('{{TITLE}}', 'Information Updated!')
-        .replace('{{SUBTITLE}}', 'Your records for <b>Equilibrium 4.0</b> have been updated.')
-        .replace('{{UNIQUE_ID}}', userId)
-        .replace('{{USER_NAME}}', name)
-        .replace('{{MESSAGE}}', 'Your registration information has been successfully updated. If you did not request this change, please contact the fest organizers immediately. <b>PFA the transport schedule and the general guidelines for Equilibrium 4.0</b>')
+  const html = HTML_TEMPLATE
+    .replace('{{TITLE}}', 'Information Updated!')
+    .replace('{{SUBTITLE}}', 'Your records for <b>Banjaara 2026</b> have been updated.')
+    .replace('{{UNIQUE_ID}}', userId)
+    .replace('{{USER_NAME}}', name)
+    .replace('{{MESSAGE}}', 'Your registration information has been successfully updated. If you did not request this change, please contact the fest organizers immediately. <b>PFA the transport schedule and the general guidelines for Banjaara 2026</b>')
 
-    // Return the promise
-    return sendEmail(email, subject, body, html)
+  // Return the promise
+  return sendEmail(email, subject, body, html)
 }
 
 
