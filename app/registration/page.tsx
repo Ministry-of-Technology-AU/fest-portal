@@ -18,7 +18,9 @@ export default function RegistrationPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [bandNumber, setBandNumber] = useState("")
-  const [deskNumber, setDeskNumber] = useState("")
+  const [inDeskNumber, setInDeskNumber] = useState("")
+  const [outDeskNumber, setOutDeskNumber] = useState("")
+  const [flagNote, setFlagNote] = useState("")
 
   const isBanjaara = session?.user?.name === "banjaara"
 
@@ -26,10 +28,14 @@ export default function RegistrationPage() {
     setSelectedUser(user)
     if (isBanjaara && user?.additionalParams) {
       setBandNumber((user.additionalParams.bandNumber as string) ?? "")
-      setDeskNumber((user.additionalParams.deskNumber as string) ?? "")
+      setInDeskNumber((user.additionalParams.inDeskNumber as string) ?? "")
+      setOutDeskNumber((user.additionalParams.outDeskNumber as string) ?? "")
+      setFlagNote((user.additionalParams.flagNote as string) ?? "")
     } else {
       setBandNumber("")
-      setDeskNumber("")
+      setInDeskNumber("")
+      setOutDeskNumber("")
+      setFlagNote("")
     }
   }
 
@@ -58,15 +64,15 @@ export default function RegistrationPage() {
   const handleRegIn = async () => {
     if (!selectedUser || actionLoading) return
 
-    if (isBanjaara && (!bandNumber.trim() || !deskNumber.trim())) {
-      toast.error("Band number and desk number are required")
+    if (isBanjaara && (!bandNumber.trim() || !inDeskNumber.trim())) {
+      toast.error("Band number and in-desk number are required")
       return
     }
 
     try {
       setActionLoading(true)
       const additionalParams = isBanjaara
-        ? { bandNumber: bandNumber.trim(), deskNumber: deskNumber.trim() }
+        ? { bandNumber: bandNumber.trim(), inDeskNumber: inDeskNumber.trim(), ...(flagNote.trim() ? { flagNote: flagNote.trim() } : { flagNote: "" }) }
         : undefined
       await updateRegistrationStatus(selectedUser.id, "reg-in", additionalParams)
 
@@ -79,11 +85,12 @@ export default function RegistrationPage() {
         }
       })
 
-      // Refresh the users list and clear selection
       await refetch()
       setSelectedUser(null)
       setBandNumber("")
-      setDeskNumber("")
+      setInDeskNumber("")
+      setOutDeskNumber("")
+      setFlagNote("")
     } catch (error) {
       toast.error("Failed to update status", {
         description: error instanceof Error ? error.message : "Unknown error occurred",
@@ -101,9 +108,17 @@ export default function RegistrationPage() {
   const handleRegOut = async () => {
     if (!selectedUser || actionLoading) return
 
+    if (isBanjaara && !outDeskNumber.trim()) {
+      toast.error("Out-desk number is required")
+      return
+    }
+
     try {
       setActionLoading(true)
-      await updateRegistrationStatus(selectedUser.id, "reg-out")
+      const additionalParams = isBanjaara
+        ? { outDeskNumber: outDeskNumber.trim() }
+        : undefined
+      await updateRegistrationStatus(selectedUser.id, "reg-out", additionalParams)
 
       toast.success(`Registration-Out completed for ${selectedUser.name}`, {
         description: `Student ${selectedUser.id} is now registered-out`,
@@ -114,9 +129,11 @@ export default function RegistrationPage() {
         }
       })
 
-      // Refresh the users list and clear selection
       await refetch()
       setSelectedUser(null)
+      setBandNumber("")
+      setInDeskNumber("")
+      setOutDeskNumber("")
     } catch (error) {
       toast.error("Failed to update status", {
         description: error instanceof Error ? error.message : "Unknown error occurred",
@@ -267,25 +284,51 @@ export default function RegistrationPage() {
                     </div> */}
 
                   {isBanjaara && (
-                    <div className="bg-secondary/20 p-3 rounded border space-y-3">
-                      <p className="text-sm text-muted-foreground font-medium">Banjaara Registration Details</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label htmlFor="bandNumber" className="text-sm">Band Number</Label>
-                          <Input
-                            id="bandNumber"
-                            placeholder="e.g. 2"
-                            value={bandNumber}
-                            onChange={(e) => setBandNumber(e.target.value)}
-                          />
+                    <div className="space-y-2">
+                      {!!selectedUser.additionalParams?.flagNote && (
+                        <div className="bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700 p-3 rounded">
+                          <p className="text-sm font-semibold text-red-700 dark:text-red-300">Flagged</p>
+                          <p className="text-sm text-red-600 dark:text-red-400">{String(selectedUser.additionalParams.flagNote)}</p>
+                        </div>
+                      )}
+                      <div className="bg-secondary/20 p-3 rounded border space-y-3">
+                        <p className="text-sm text-muted-foreground font-medium">Banjaara Registration Details</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label htmlFor="bandNumber" className="text-sm">Band Number</Label>
+                            <Input
+                              id="bandNumber"
+                              placeholder="e.g. B3"
+                              value={bandNumber}
+                              onChange={(e) => setBandNumber(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="inDeskNumber" className="text-sm">In-Desk Number</Label>
+                            <Input
+                              id="inDeskNumber"
+                              placeholder="e.g. D5"
+                              value={inDeskNumber}
+                              onChange={(e) => setInDeskNumber(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="outDeskNumber" className="text-sm">Out-Desk Number</Label>
+                            <Input
+                              id="outDeskNumber"
+                              placeholder="e.g. D2"
+                              value={outDeskNumber}
+                              onChange={(e) => setOutDeskNumber(e.target.value)}
+                            />
+                          </div>
                         </div>
                         <div className="space-y-1">
-                          <Label htmlFor="deskNumber" className="text-sm">Desk Number</Label>
+                          <Label htmlFor="flagNote" className="text-sm">Flag Note <span className="text-muted-foreground font-normal text-xs">(leave empty to unflag)</span></Label>
                           <Input
-                            id="deskNumber"
-                            placeholder="e.g. 5"
-                            value={deskNumber}
-                            onChange={(e) => setDeskNumber(e.target.value)}
+                            id="flagNote"
+                            placeholder="Reason for flagging..."
+                            value={flagNote}
+                            onChange={(e) => setFlagNote(e.target.value)}
                           />
                         </div>
                       </div>

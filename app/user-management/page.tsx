@@ -417,15 +417,15 @@ export default function UserManagementPage() {
                   </div>
 
                   {isBanjaara && (
-                    <div className="col-span-2">
-                      <label className="text-sm font-medium mb-2 block">Banjaara Details</label>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2 space-y-3">
+                      <label className="text-sm font-medium block">Banjaara Details</label>
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
                           <Label htmlFor="edit-band" className="text-sm">Band Number</Label>
                           <Input
                             id="edit-band"
                             className="mt-1"
-                            placeholder="e.g. 2"
+                            placeholder="e.g. B3"
                             value={(editData.additionalParams?.bandNumber as string) ?? ""}
                             onChange={(e) => setEditData({
                               ...editData,
@@ -434,18 +434,44 @@ export default function UserManagementPage() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-desk" className="text-sm">Desk Number</Label>
+                          <Label htmlFor="edit-indesk" className="text-sm">In-Desk Number</Label>
                           <Input
-                            id="edit-desk"
+                            id="edit-indesk"
                             className="mt-1"
-                            placeholder="e.g. 5"
-                            value={(editData.additionalParams?.deskNumber as string) ?? ""}
+                            placeholder="e.g. D5"
+                            value={(editData.additionalParams?.inDeskNumber as string) ?? ""}
                             onChange={(e) => setEditData({
                               ...editData,
-                              additionalParams: { ...editData.additionalParams, deskNumber: e.target.value }
+                              additionalParams: { ...editData.additionalParams, inDeskNumber: e.target.value }
                             })}
                           />
                         </div>
+                        <div>
+                          <Label htmlFor="edit-outdesk" className="text-sm">Out-Desk Number</Label>
+                          <Input
+                            id="edit-outdesk"
+                            className="mt-1"
+                            placeholder="e.g. D2"
+                            value={(editData.additionalParams?.outDeskNumber as string) ?? ""}
+                            onChange={(e) => setEditData({
+                              ...editData,
+                              additionalParams: { ...editData.additionalParams, outDeskNumber: e.target.value }
+                            })}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-flagnote" className="text-sm">Flag Note <span className="text-muted-foreground font-normal">(leave empty to unflag)</span></Label>
+                        <Input
+                          id="edit-flagnote"
+                          className="mt-1"
+                          placeholder="Reason for flagging..."
+                          value={(editData.additionalParams?.flagNote as string) ?? ""}
+                          onChange={(e) => setEditData({
+                            ...editData,
+                            additionalParams: { ...editData.additionalParams, flagNote: e.target.value }
+                          })}
+                        />
                       </div>
                     </div>
                   )}

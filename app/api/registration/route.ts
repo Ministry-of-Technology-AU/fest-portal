@@ -74,7 +74,9 @@ export async function POST(request: NextRequest) {
         data: {
           currentStatus: newStatus as any,
           lastStatusTime: now,
-          ...(action === 'reg-in' && additionalParams ? { additionalParams } : {})
+          ...(additionalParams ? {
+            additionalParams: { ...(user.additionalParams as object ?? {}), ...additionalParams }
+          } : {})
         }
       }),
       // Create trail entry
