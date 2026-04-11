@@ -6,8 +6,9 @@ import prisma from './prisma';
 import { sendUserCreatedEmail } from './mail';
 import { randomBytes } from 'crypto';
 
-const FEST_ID = 'cmmytqgyv0000ju04rarqswxb';
-const CSV_PATH = path.join(process.cwd(), 'UPDATED EQ REGNS - Sheet1.csv');
+const FEST_ID = 'cmnizh7a80000l504gr6xa56f';
+const CSV_PATH = path.join(process.cwd(), 'Banjaara Reg - portal upload.csv');
+// const CSV_PATH = path.join(process.cwd(), 'Banjaara Test.csv');
 
 
 // Reusing generating logic from app/api/create-user/route.ts
@@ -81,7 +82,7 @@ async function migrate() {
       console.log(`[${++count}] Processing user: ${record.Name} (${record['Email ID']})`);
 
       // Safe re-run: check if user already exists in DB by email before doing anything
-      const existing = await prisma.user.findUnique({ where: { email: record['Email ID'] } });
+      const existing = await prisma.user.findFirst({ where: { email: record['Email ID'], festId: FEST_ID } });
       if (existing) {
         console.log(`   -> Already in DB (ID: ${existing.id}), skipping insert.`);
         record.isDone = 'true';

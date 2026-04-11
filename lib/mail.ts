@@ -13,12 +13,12 @@ const transporter = nodemailer.createTransport({
 // Define the static attachments
 const ATTACHMENTS = [
   {
-    filename: 'General Guidelines + Security Protocols.pdf',
-    path: path.join(process.cwd(), 'public', 'EXTERNALS -  General Guidelines + Security Protocols.pdf')
+    filename: 'Banjaara 2026 Rules and Regulations (External Participants_Attendees).pdf',
+    path: path.join(process.cwd(), 'public', 'Banjaara 2026_ Rules and Regulations (External Participants_Attendees).pdf')
   },
   {
-    filename: 'Transport schedule - EQ 4.0.pdf',
-    path: path.join(process.cwd(), 'public', 'Transport schedule - EQ 4.0.pdf')
+    filename: 'Shuttle Schedule 11th April Banjaara7.0.pdf',
+    path: path.join(process.cwd(), 'public', 'Shuttle Schedule_11th April_Banjaara7.0 - Google Docs 2.pdf')
   }
 ]
 
@@ -30,7 +30,7 @@ export async function sendEmail(receiver: string, subject: string, body: string,
       subject,
       text: body,
       html: html || undefined,
-      // attachments: ATTACHMENTS,
+      attachments: ATTACHMENTS,
     })
 
     console.log('Email sent successfully:', info.messageId)
@@ -163,30 +163,29 @@ const HTML_TEMPLATE = `
 `
 
 export async function sendUserCreatedEmail(email: string, name: string, userId: string, festName: string) {
-  const subject = `Welcome to Banjaara 2026 — Your Registration ID`
-  const body = `Hi ${name},\n\nYou have been successfully registered for Banjaara 2026!\n\nYour User ID: ${userId}\n\nPlease keep this ID safe — you will need it for gate entry and event registration.\n\nSee you at the fest!`
+  const subject = `Welcome to Banjaara 7.0 — Your Registration ID`
+  const body = `Hi ${name},\n\nYou're registered for Banjaara 7.0!\n\nYour User ID: ${userId}\n\nThis is mandatory for entry — please save it carefully.\n\nSee you at the fest!\nTeam Banjaara`
 
   const html = HTML_TEMPLATE
     .replace('{{TITLE}}', 'Registration Confirmed!')
-    .replace('{{SUBTITLE}}', 'We are excited to have you at <b>Banjaara 2026</b>!')
+    .replace('{{SUBTITLE}}', "You're in for <b>Banjaara 7.0</b> — Ashoka University's biggest cultural fest!")
     .replace('{{UNIQUE_ID}}', userId)
     .replace('{{USER_NAME}}', name)
-    .replace('{{MESSAGE}}', 'Your registration for the event has been successfully processed. Please present the ID above at the check-in counter on the day of the event. <b>PFA the transport schedule and the general guidelines for Banjaara 2026</b>')
+    .replace('{{MESSAGE}}', `Get ready for 25+ competitions and headliners like <b>Pranav Sharma</b> and <b>Nikhil D'Souza</b>.<br><br>A few things to keep in mind:<br><ul style="padding-left:20px;line-height:1.8;"><li>Please carry <b>physical copies</b> of both your <b>government ID</b> and <b>college ID</b> — soft copies will not be accepted.</li><li>A policy document with shuttle services and on-campus guidelines is attached — please read it carefully.</li><li>Shuttle services from Azadpur to Ashoka run on a first-come, first-served basis. Schedule attached below.</li></ul>Can't wait to host you. See you soon! ✨<br><br><b>Warm regards,<br>Team Banjaara</b>`)
 
-  // Return the promise so it can be awaited if needed
   return sendEmail(email, subject, body, html)
 }
 
 export async function sendUserUpdatedEmail(email: string, name: string, userId: string, festName: string) {
-  const subject = `Banjaara 2026 — Your Information Has Been Updated`
-  const body = `Hi ${name},\n\nYour registration information for Banjaara 2026 has been updated.\n\nYour User ID: ${userId}\n\nIf you did not request this change, please contact the fest organizers.\n\nSee you at the fest!`
+  const subject = `Banjaara 7.0 — Your Information Has Been Updated`
+  const body = `Hi ${name},\n\nYour registration information for Banjaara 7.0 has been updated.\n\nYour User ID: ${userId}\n\nIf you did not request this change, please contact the fest organizers.\n\nSee you at the fest!`
 
   const html = HTML_TEMPLATE
     .replace('{{TITLE}}', 'Information Updated!')
-    .replace('{{SUBTITLE}}', 'Your records for <b>Banjaara 2026</b> have been updated.')
+    .replace('{{SUBTITLE}}', 'Your records for <b>Banjaara 7.0</b> have been updated.')
     .replace('{{UNIQUE_ID}}', userId)
     .replace('{{USER_NAME}}', name)
-    .replace('{{MESSAGE}}', 'Your registration information has been successfully updated. If you did not request this change, please contact the fest organizers immediately. <b>PFA the transport schedule and the general guidelines for Banjaara 2026</b>')
+    .replace('{{MESSAGE}}', 'Your registration information has been successfully updated. If you did not request this change, please contact the fest organizers immediately. <b>PFA the transport schedule and the general guidelines for Banjaara 7.0</b>')
 
   // Return the promise
   return sendEmail(email, subject, body, html)

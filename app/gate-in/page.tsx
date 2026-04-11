@@ -144,11 +144,11 @@ export default function GateInPage() {
                       <p className="text-sm text-muted-foreground">College</p>
                       <p className="font-semibold">{selectedUser.collegeName}</p>
                     </div>
-                    <div>
+                    <div className="col-span-2 sm:col-span-1">
                       <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-semibold text-sm">{selectedUser.email}</p>
+                      <p className="font-semibold text-sm break-all">{selectedUser.email}</p>
                     </div>
-                    <div>
+                    <div className="col-span-2 sm:col-span-1">
                       <p className="text-sm text-muted-foreground">Phone</p>
                       <p className="font-semibold">{selectedUser.phoneNumber}</p>
                     </div>
