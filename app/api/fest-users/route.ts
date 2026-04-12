@@ -24,9 +24,6 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch fest users' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
-  }
 }
 
 // POST - Create new fest user (admin only)
@@ -92,9 +89,6 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create fest user' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
-  }
 }
 
 // PUT - Update fest user password (admin only)
@@ -153,9 +147,6 @@ export async function PUT(request: NextRequest) {
       { error: 'Failed to update fest user' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
-  }
 }
 
 // DELETE - Delete fest user (admin only)
@@ -186,7 +177,4 @@ export async function DELETE(request: NextRequest) {
       { error: 'Failed to delete fest user' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
-  }
 }

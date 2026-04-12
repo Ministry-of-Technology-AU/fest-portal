@@ -237,7 +237,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create user' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }

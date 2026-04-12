@@ -35,7 +35,4 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch events' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
-  }
 }

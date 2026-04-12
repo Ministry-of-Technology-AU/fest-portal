@@ -166,7 +166,4 @@ export async function PUT(request: NextRequest) {
       { error: 'Failed to update user' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
-  }
 }
