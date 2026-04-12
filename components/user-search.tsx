@@ -39,25 +39,31 @@ export function UserSearch({ onSelectUser, placeholder = "Search by ID, name, em
 
   return (
     <div className="relative w-full">
-      <Input
-        type="text"
-        placeholder={placeholder}
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          if (!e.target.value) {
-            setResults([])
-            setShowResults(false)
-          }
-        }}
-        onKeyDown={handleKeyDown}
-        onBlur={() => setTimeout(() => setShowResults(false), 150)}
-        onFocus={() => results.length > 0 && setShowResults(true)}
-        className="border-border"
-      />
-      {loading && (
-        <p className="absolute top-full left-0 mt-2 text-xs text-muted-foreground px-1">Searching...</p>
-      )}
+      <div className="flex gap-2">
+        <Input
+          type="text"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            if (!e.target.value) {
+              setResults([])
+              setShowResults(false)
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          onBlur={() => setTimeout(() => setShowResults(false), 150)}
+          onFocus={() => results.length > 0 && setShowResults(true)}
+          className="border-border"
+        />
+        <button
+          onClick={search}
+          disabled={loading}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 shrink-0"
+        >
+          {loading ? "..." : "Search"}
+        </button>
+      </div>
       {showResults && !loading && (
         <Card className="absolute top-full left-0 right-0 mt-2 z-50 max-h-96 overflow-y-auto">
           <CardContent className="p-0">
