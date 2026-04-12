@@ -72,6 +72,14 @@ export default function AdminPage() {
     )
   }
 
+  const day11GateIns = users.filter((u) =>
+    u.statusTrail.some((t) => t.status === "gate-in" && new Date(t.timestamp).toLocaleDateString("en-GB") === "11/04/2026")
+  ).length
+
+  const day12GateIns = users.filter((u) =>
+    u.statusTrail.some((t) => t.status === "gate-in" && new Date(t.timestamp).toLocaleDateString("en-GB") === "12/04/2026")
+  ).length
+
   const bandUsers = bandQuery.trim()
     ? users.filter((u) => {
         const band = (u.additionalParams?.bandNumber as string) ?? ""
@@ -212,6 +220,11 @@ export default function AdminPage() {
               Last updated: {lastUpdated.toLocaleTimeString()}
               <span className="ml-2 text-green-600">• Auto-refresh: 30s</span>
             </div>
+          </div>
+          <div className="flex items-center gap-4 mb-8 text-xs text-muted-foreground">
+            <span>Gate-ins on 11 Apr: <span className="font-semibold text-orange-600">{day11GateIns}</span></span>
+            <span>•</span>
+            <span>Gate-ins on 12 Apr: <span className="font-semibold text-orange-600">{day12GateIns}</span></span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">            
