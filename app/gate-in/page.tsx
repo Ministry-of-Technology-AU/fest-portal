@@ -7,34 +7,11 @@ import { UserSearch } from "@/components/user-search"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { User, SecurityStatus } from "@/lib/types"
-import { useUsers, updateGateStatus } from "@/lib/api"
+import { updateGateStatus } from "@/lib/api"
 
 export default function GateInPage() {
-  const { users, loading, error, refetch } = useUsers()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center">Loading...</div>
-        </main>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center text-red-500">Error: {error}</div>
-        </main>
-      </div>
-    )
-  }
 
   const handleGateIn = async () => {
     if (!selectedUser || actionLoading) return
@@ -53,7 +30,6 @@ export default function GateInPage() {
       })
 
       // Refresh the users list and clear selection
-      await refetch()
       setSelectedUser(null)
     } catch (error) {
       toast.error("Failed to update status", {
@@ -86,7 +62,6 @@ export default function GateInPage() {
       })
 
       // Refresh the users list and clear selection
-      await refetch()
       setSelectedUser(null)
     } catch (error) {
       toast.error("Failed to update status", {
@@ -127,7 +102,7 @@ export default function GateInPage() {
             <CardDescription>Find student by ID or name</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <UserSearch users={users} onSelectUser={setSelectedUser} />
+            <UserSearch onSelectUser={setSelectedUser} />
 
             {selectedUser && (
               <Card className="bg-muted/50 border-primary/20">

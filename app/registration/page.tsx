@@ -10,10 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { User, SecurityStatus } from "@/lib/types"
-import { useUsers, updateRegistrationStatus } from "@/lib/api"
+import { updateRegistrationStatus } from "@/lib/api"
 
 export default function RegistrationPage() {
-  const { users, loading, error, refetch } = useUsers()
   const { data: session } = useSession()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
@@ -37,28 +36,6 @@ export default function RegistrationPage() {
       setOutDeskNumber("")
       setFlagNote("")
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center">Loading...</div>
-        </main>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center text-red-500">Error: {error}</div>
-        </main>
-      </div>
-    )
   }
 
   const handleRegIn = async () => {
@@ -85,7 +62,6 @@ export default function RegistrationPage() {
         }
       })
 
-      await refetch()
       setSelectedUser(null)
       setBandNumber("")
       setInDeskNumber("")
@@ -129,7 +105,6 @@ export default function RegistrationPage() {
         }
       })
 
-      await refetch()
       setSelectedUser(null)
       setBandNumber("")
       setInDeskNumber("")
@@ -173,7 +148,7 @@ export default function RegistrationPage() {
             <CardDescription>Find student by ID or name</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <UserSearch users={users} onSelectUser={handleSelectUser} />
+            <UserSearch onSelectUser={handleSelectUser} />
 
             {selectedUser && (
               <Card className="bg-muted/50 border-primary/20">

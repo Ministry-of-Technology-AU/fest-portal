@@ -7,7 +7,7 @@ import { sendUserCreatedEmail } from './mail';
 import { randomBytes } from 'crypto';
 
 const FEST_ID = 'cmnizh7a80000l504gr6xa56f';
-const CSV_PATH = path.join(process.cwd(), 'Banjaara Reg - portal upload.csv');
+const CSV_PATH = path.join(process.cwd(), 'portal upload.csv');
 // const CSV_PATH = path.join(process.cwd(), 'Banjaara Test.csv');
 
 

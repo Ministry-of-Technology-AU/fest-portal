@@ -11,13 +11,12 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import type { User } from "@/lib/types"
-import { useUsers, updateUser } from "@/lib/api"
+import { updateUser } from "@/lib/api"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function UserManagementPage() {
-  const { users, loading, error, refetch } = useUsers()
   const { data: session } = useSession()
   const isBanjaara = session?.user?.name === "banjaara"
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -53,27 +52,7 @@ export default function UserManagementPage() {
     fetchEvents()
   }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center">Loading...</div>
-        </main>
-      </div>
-    )
-  }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center text-red-500">Error: {error}</div>
-        </main>
-      </div>
-    )
-  }
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user)
@@ -97,7 +76,6 @@ export default function UserManagementPage() {
       })
 
       // Refresh the users list and clear selection
-      await refetch()
       setSelectedUser(null)
       setEditData({})
     } catch (error) {
@@ -146,8 +124,7 @@ export default function UserManagementPage() {
         })
         setNewUserData({ name: '', email: '', phoneNumber: '', collegeName: '', eventsRegistered: [] })
         setIsAddOpen(false)
-        await refetch()
-      } else {
+        } else {
         toast.error(result.error || 'Failed to create user')
       }
     } catch (error) {
@@ -315,7 +292,7 @@ export default function UserManagementPage() {
             <CardDescription>Find student by ID or name to edit</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <UserSearch users={users} onSelectUser={handleSelectUser} />
+            <UserSearch onSelectUser={handleSelectUser} />
 
             {selectedUser && (
               <Card className="bg-muted/50 border-primary/20">

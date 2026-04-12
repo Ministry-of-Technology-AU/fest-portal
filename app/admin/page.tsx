@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { Navigation } from "@/components/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
 import type { User, SecurityStatus } from "@/lib/types"
 import { useUsers } from "@/lib/api"
 
@@ -11,6 +12,7 @@ export default function AdminPage() {
   const { users, loading, error, refetch } = useUsers()
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [bandQuery, setBandQuery] = useState("")
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -69,6 +71,13 @@ export default function AdminPage() {
       </div>
     )
   }
+
+  const bandUsers = bandQuery.trim()
+    ? users.filter((u) => {
+        const band = (u.additionalParams?.bandNumber as string) ?? ""
+        return band.toLowerCase() === bandQuery.trim().toLowerCase()
+      })
+    : []
 
   // Filter users by status
   const gateOutUsers = users.filter((u) => u.currentStatus === "gate-out")
@@ -256,11 +265,12 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="gate-out" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="gate-out">Outside Gate ({gateOutUsers.length})</TabsTrigger>
                   <TabsTrigger value="gate-in">Inside Gate ({gateInUsers.length})</TabsTrigger>
                   <TabsTrigger value="reg-in">Registered In ({regInUsers.length})</TabsTrigger>
                   <TabsTrigger value="reg-out">Registered Out ({regOutUsers.length})</TabsTrigger>
+                  <TabsTrigger value="band-search">Band Search</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="gate-out" className="mt-4">
@@ -293,6 +303,26 @@ export default function AdminPage() {
                     <p className="text-sm text-muted-foreground">Students who have registered but haven't left the gate</p>
                   </div>
                   <UserTable users={regOutUsers} />
+                </TabsContent>
+
+                <TabsContent value="band-search" className="mt-4">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-foreground">Band Search</h3>
+                    <p className="text-sm text-muted-foreground">Find all participants assigned to a specific band number</p>
+                  </div>
+                  <div className="mb-4 max-w-xs">
+                    <Input
+                      placeholder="Enter band number e.g. B3"
+                      value={bandQuery}
+                      onChange={(e) => setBandQuery(e.target.value)}
+                    />
+                  </div>
+                  {bandQuery.trim() && (
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {bandUsers.length} participant{bandUsers.length !== 1 ? "s" : ""} found for band <strong>{bandQuery.trim()}</strong>
+                    </p>
+                  )}
+                  {bandQuery.trim() && <UserTable users={bandUsers} />}
                 </TabsContent>
               </Tabs>
             </CardContent>

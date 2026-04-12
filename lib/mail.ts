@@ -30,7 +30,7 @@ export async function sendEmail(receiver: string, subject: string, body: string,
       subject,
       text: body,
       html: html || undefined,
-      attachments: ATTACHMENTS,
+      // attachments: ATTACHMENTS,
     })
 
     console.log('Email sent successfully:', info.messageId)
@@ -171,7 +171,7 @@ export async function sendUserCreatedEmail(email: string, name: string, userId: 
     .replace('{{SUBTITLE}}', "You're in for <b>Banjaara 7.0</b> — Ashoka University's biggest cultural fest!")
     .replace('{{UNIQUE_ID}}', userId)
     .replace('{{USER_NAME}}', name)
-    .replace('{{MESSAGE}}', `Get ready for 25+ competitions and headliners like <b>Pranav Sharma</b> and <b>Nikhil D'Souza</b>.<br><br>A few things to keep in mind:<br><ul style="padding-left:20px;line-height:1.8;"><li>Please carry <b>physical copies</b> of both your <b>government ID</b> and <b>college ID</b> — soft copies will not be accepted.</li><li>A policy document with shuttle services and on-campus guidelines is attached — please read it carefully.</li><li>Shuttle services from Azadpur to Ashoka run on a first-come, first-served basis. Schedule attached below.</li></ul>Can't wait to host you. See you soon! ✨<br><br><b>Warm regards,<br>Team Banjaara</b>`)
+    .replace('{{MESSAGE}}', `Get ready for 25+ competitions and headliners like <b>Pranav Sharma</b> and <b>Nikhil D'Souza</b>.<br><br>A few things to keep in mind:<br><ul style="padding-left:20px;line-height:1.8;"><li>Please carry <b>physical copies</b> of both your <b>government ID</b> and <b>college ID</b> — soft copies will not be accepted.</li><li>Please go through the policy document and shuttle schedule: <a href="https://drive.google.com/drive/folders/1SAltkJh2CVcYw7haouDe9kIaWwkjkx46?usp=sharing" style="color:#0ea5e9;">Banjaara 7.0 Documents</a></li><li>Shuttle services from Azadpur to Ashoka run on a first-come, first-served basis.</li></ul>Can't wait to host you. See you soon! ✨<br><br><b>Warm regards,<br>Team Banjaara</b>`)
 
   return sendEmail(email, subject, body, html)
 }
