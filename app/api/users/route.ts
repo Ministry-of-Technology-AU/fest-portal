@@ -78,4 +78,5 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch users' },
       { status: 500 }
     )
+  }
 }

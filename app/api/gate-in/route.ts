@@ -102,4 +102,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to update status' },
       { status: 500 }
     )
+  }
 }
