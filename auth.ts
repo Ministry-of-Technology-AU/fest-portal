@@ -6,13 +6,11 @@ import bcrypt from "bcryptjs"
 import type { NextAuthConfig, User, Account, Profile } from "next-auth"
 import type { JWT } from "next-auth/jwt"
 
-// List of allowed admin email addresses
-const ALLOWED_ADMIN_EMAILS = [
-  "admin@ashoka.edu.in",
-  "security@ashoka.edu.in",
-  "vansh.bothra_ug25@ashoka.edu.in"
-  // Add more admin emails as needed
-]
+// Allowed admin email addresses, from ADMIN_EMAILS (comma-separated)
+const ALLOWED_ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map(email => email.trim().toLowerCase())
+  .filter(Boolean)
 
 const config: NextAuthConfig = {
   providers: [
@@ -77,7 +75,7 @@ const config: NextAuthConfig = {
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         // Check if email is in allowed admin list
-        if (!ALLOWED_ADMIN_EMAILS.includes(user.email!)) {
+        if (!user.email || !ALLOWED_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
           return false
         }
         // No need to store admin users in database - just verify email is allowed
