@@ -3,8 +3,12 @@
 import { Navigation } from "@/components/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 
 export default function DashboardPage() {
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
+
   return (
     <div className="min-h-screen bg-background">
         <Navigation />
@@ -15,7 +19,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href="/fest/gate-in">
+            <Link href="/gate-in">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Gate-In/Out</CardTitle>
@@ -27,7 +31,7 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/fest/registration">
+            <Link href="/registration">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Registration</CardTitle>
@@ -39,7 +43,7 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/fest/user-management">
+            <Link href="/user-management">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Manage Users</CardTitle>
@@ -51,19 +55,21 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/fest/fest-users">
-              <Card className="cursor-pointer hover:shadow-lg transition h-full">
-                <CardHeader>
-                  <CardTitle className="text-primary">Fest Users</CardTitle>
-                  <CardDescription>Create and manage fest user accounts</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Add/remove portal login accounts</p>
-                </CardContent>
-              </Card>
-            </Link>
+            {isAdmin && (
+              <Link href="/fest-users">
+                <Card className="cursor-pointer hover:shadow-lg transition h-full">
+                  <CardHeader>
+                    <CardTitle className="text-primary">Fest Users</CardTitle>
+                    <CardDescription>Create and manage fest user accounts</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">Add/remove portal login accounts</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
 
-            <Link href="/fest/admin">
+            <Link href="/admin">
               <Card className="cursor-pointer hover:shadow-lg transition h-full">
                 <CardHeader>
                   <CardTitle className="text-primary">Admin Dashboard</CardTitle>
