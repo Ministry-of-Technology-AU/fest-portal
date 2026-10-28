@@ -1,18 +1,35 @@
 import type React from "react"
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Nunito, Nunito_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/sonner"
 import Providers from "@/components/providers"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const nunito = Nunito({
+  variable: "--font-nunito",
+  weight: ["400", "600", "700", "800"],
+  subsets: ["latin"],
+})
+
+const nunitoSans = Nunito_Sans({
+  variable: "--font-nunito-sans",
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+})
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f4f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#171717" },
+  ],
+}
 
 export const metadata: Metadata = {
-  title: "University Security Portal",
-  description: "Gate-in and Registration Portal",
-  generator: "v0.app",
+  title: "Ashoka Fest Security Portal",
+  description: "Gate-in and registration portal, by Techmin",
 }
 
 export default function RootLayout({
@@ -21,12 +38,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${nunito.variable} ${nunitoSans.variable}`}>
+      <body className="antialiased">
         <Providers>
           {children}
+          <Toaster position="top-right" richColors closeButton />
         </Providers>
-        <Toaster />
         <Analytics />
       </body>
     </html>
