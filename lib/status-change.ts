@@ -14,12 +14,38 @@ interface StatusChange {
   source: StatusSource
   /** Shallow-merged into the user's existing additionalParams */
   additionalParams?: Record<string, unknown>
+  /**
+   * Id the device gave this change. A retry of a change that already applied
+   * (e.g. the response was lost on a bad connection) then succeeds instead of
+   * failing the status check.
+   */
+  clientOpId?: string
+  /** When the device recorded the scan; offline scans reach the server later */
+  scannedAt?: Date
 }
 
 type StatusChangeResult =
-  | { ok: true; user: { id: string; currentStatus: SecurityStatus; lastStatusTime: Date } }
+  | { ok: true; replayed?: boolean; user: { id: string; currentStatus: SecurityStatus; lastStatusTime: Date } }
   | { ok: false; reason: 'not_found' }
   | { ok: false; reason: 'invalid_transition'; currentStatus: SecurityStatus }
+
+const OP_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const MAX_SCAN_AGE_MS = 24 * 60 * 60 * 1000
+
+/** Reads the optional offline-queue fields from a request body, dropping anything malformed */
+export function parseClientOp(body: { opId?: unknown; scannedAt?: unknown }) {
+  const clientOpId = typeof body.opId === 'string' && OP_ID_PATTERN.test(body.opId) ? body.opId : undefined
+
+  let scannedAt: Date | undefined
+  if (typeof body.scannedAt === 'string') {
+    const time = new Date(body.scannedAt).getTime()
+    const now = Date.now()
+    // Device clocks can drift; keep the scan time within the last day and not in the future
+    if (!isNaN(time)) scannedAt = new Date(Math.min(now, Math.max(now - MAX_SCAN_AGE_MS, time)))
+  }
+
+  return { clientOpId, scannedAt }
+}
 
 /**
  * Checks the current status, updates it and writes the trail entry in a single
@@ -28,8 +54,10 @@ type StatusChangeResult =
  * succeed: the second one sees the new status and fails the check.
  */
 export async function applyStatusChange(change: StatusChange): Promise<StatusChangeResult> {
-  const { userId, festId, from, to, source, additionalParams } = change
+  const { userId, festId, from, to, source, additionalParams, clientOpId, scannedAt } = change
 
+  // lastStatusTime is always the server's time, because the incremental sync in
+  // /api/users looks for changes by it. Only the trail entry gets the scan time.
   const rows = await prisma.$queryRaw<{ id: string; currentStatus: SecurityStatus; lastStatusTime: Date }[]>`
     WITH updated AS (
       UPDATE "user"
@@ -43,8 +71,10 @@ export async function applyStatusChange(change: StatusChange): Promise<StatusCha
         AND "currentStatus"::text = ANY(${from}::text[])
       RETURNING id, "currentStatus"::text AS "currentStatus", "lastStatusTime"
     ), trail AS (
-      INSERT INTO status_trail ("userId", status, "timestamp", source)
-      SELECT id, ${to}::status_trail_status, "lastStatusTime", ${source}::status_trail_source
+      INSERT INTO status_trail ("userId", status, "timestamp", source, "clientOpId")
+      SELECT id, ${to}::status_trail_status,
+        ${scannedAt ? Prisma.sql`${scannedAt.toISOString()}::timestamptz AT TIME ZONE 'UTC'` : Prisma.sql`"lastStatusTime"`},
+        ${source}::status_trail_source, ${clientOpId ?? null}::varchar
       FROM updated
     )
     SELECT * FROM updated
@@ -54,19 +84,26 @@ export async function applyStatusChange(change: StatusChange): Promise<StatusCha
     return { ok: true, user: rows[0] }
   }
 
-  // Only reached when the change didn't apply: find out why for the error message
-  const user = await prisma.user.findFirst({
-    where: festId ? { id: userId, festId } : { id: userId },
-    select: { currentStatus: true },
-  })
+  // Only reached when the change didn't apply: find out why
+  const [user, alreadyApplied] = await Promise.all([
+    prisma.user.findFirst({
+      where: festId ? { id: userId, festId } : { id: userId },
+      select: { id: true, currentStatus: true, lastStatusTime: true },
+    }),
+    clientOpId
+      ? prisma.status_trail.findUnique({ where: { clientOpId }, select: { userId: true } })
+      : null,
+  ])
 
   if (!user) {
     return { ok: false, reason: 'not_found' }
   }
 
-  return {
-    ok: false,
-    reason: 'invalid_transition',
-    currentStatus: user.currentStatus.replace('_', '-') as SecurityStatus,
+  const currentStatus = user.currentStatus.replace('_', '-') as SecurityStatus
+
+  if (alreadyApplied?.userId === user.id) {
+    return { ok: true, replayed: true, user: { ...user, currentStatus } }
   }
+
+  return { ok: false, reason: 'invalid_transition', currentStatus }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useSession } from "next-auth/react"
+import { useOperator } from "@/components/offline-provider"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
@@ -11,7 +11,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
-  const { data: session, status } = useSession()
+  const { session, status } = useOperator()
   const router = useRouter()
 
   useEffect(() => {

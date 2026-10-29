@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useSession } from "next-auth/react"
+import { useOperator } from "@/components/offline-provider"
 import { ArrowUpRight } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
@@ -66,7 +66,7 @@ function ToolCard({ link, index }: { link: NavLink; index: number }) {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession()
+  const { session } = useOperator()
   const links = visibleNavLinks(session?.user?.role).filter((link) => link.href !== "/dashboard")
   const deskLinks = links.filter((link) => link.desk)
   const toolLinks = links.filter((link) => !link.desk)

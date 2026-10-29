@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { useSession } from "next-auth/react"
+import { useOperator } from "@/components/offline-provider"
 import { ClipboardCheck, Flag, Loader2, LogIn, LogOut } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
@@ -12,11 +12,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { User } from "@/lib/types"
-import { updateRegistrationStatus } from "@/lib/api"
+import type { StatusAction } from "@/lib/transitions"
+import { TRANSITIONS } from "@/lib/transitions"
+import { recordStatusChange, refreshStudent } from "@/lib/offline/engine"
+import { useStudent } from "@/lib/offline/hooks"
+import { announceResult } from "@/lib/offline/feedback"
 
 export default function RegistrationPage() {
-  const { data: session } = useSession()
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const { session } = useOperator()
+  const [picked, setPicked] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [bandNumber, setBandNumber] = useState("")
   const [inDeskNumber, setInDeskNumber] = useState("")
@@ -24,9 +28,12 @@ export default function RegistrationPage() {
   const [flagNote, setFlagNote] = useState("")
 
   const isBanjaara = session?.user?.name === "banjaara"
+  // Follows background syncs, so the status shown is the latest this device knows
+  const selectedUser = useStudent(picked?.id ?? null, picked)
 
   const handleSelectUser = (user: User | null) => {
-    setSelectedUser(user)
+    setPicked(user)
+    if (user) refreshStudent(user.id)
     if (isBanjaara && user?.additionalParams) {
       setBandNumber((user.additionalParams.bandNumber as string) ?? "")
       setInDeskNumber((user.additionalParams.inDeskNumber as string) ?? "")
@@ -40,66 +47,28 @@ export default function RegistrationPage() {
     }
   }
 
-  const handleRegIn = async () => {
+  const handleAction = async (action: StatusAction) => {
     if (!selectedUser || actionLoading) return
 
-    if (isBanjaara && (!bandNumber.trim() || !inDeskNumber.trim())) {
+    if (isBanjaara && action === "reg-in" && (!bandNumber.trim() || !inDeskNumber.trim())) {
       toast.error("Band number and in-desk number are required")
       return
     }
-
-    try {
-      setActionLoading(true)
-      const additionalParams = isBanjaara
-        ? { bandNumber: bandNumber.trim(), inDeskNumber: inDeskNumber.trim(), ...(flagNote.trim() ? { flagNote: flagNote.trim() } : { flagNote: "" }) }
-        : undefined
-      await updateRegistrationStatus(selectedUser.id, "reg-in", additionalParams)
-
-      toast.success(`Registration-In completed for ${selectedUser.name}`, {
-        description: `Student ${selectedUser.id} is now registered-in`
-      })
-
-      setSelectedUser(null)
-      setBandNumber("")
-      setInDeskNumber("")
-      setOutDeskNumber("")
-      setFlagNote("")
-    } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Unknown error occurred"
-      })
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleRegOut = async () => {
-    if (!selectedUser || actionLoading) return
-
-    if (isBanjaara && !outDeskNumber.trim()) {
+    if (isBanjaara && action === "reg-out" && !outDeskNumber.trim()) {
       toast.error("Out-desk number is required")
       return
     }
 
+    const additionalParams = !isBanjaara
+      ? undefined
+      : action === "reg-in"
+        ? { bandNumber: bandNumber.trim(), inDeskNumber: inDeskNumber.trim(), flagNote: flagNote.trim() }
+        : { outDeskNumber: outDeskNumber.trim() }
+
     try {
       setActionLoading(true)
-      const additionalParams = isBanjaara
-        ? { outDeskNumber: outDeskNumber.trim() }
-        : undefined
-      await updateRegistrationStatus(selectedUser.id, "reg-out", additionalParams)
-
-      toast.success(`Registration-Out completed for ${selectedUser.name}`, {
-        description: `Student ${selectedUser.id} is now registered-out`
-      })
-
-      setSelectedUser(null)
-      setBandNumber("")
-      setInDeskNumber("")
-      setOutDeskNumber("")
-    } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Unknown error occurred"
-      })
+      const result = await recordStatusChange(selectedUser, action, additionalParams)
+      if (announceResult(result, TRANSITIONS[action].label, selectedUser)) handleSelectUser(null)
     } finally {
       setActionLoading(false)
     }
@@ -124,11 +93,11 @@ export default function RegistrationPage() {
             onClear={() => handleSelectUser(null)}
             actions={
               <>
-                <Button onClick={handleRegIn} disabled={actionLoading} variant="success" size="xl">
+                <Button onClick={() => handleAction("reg-in")} disabled={actionLoading} variant="success" size="xl">
                   {actionLoading ? <Loader2 className="animate-spin" /> : <LogIn />}
                   Reg In
                 </Button>
-                <Button onClick={handleRegOut} disabled={actionLoading} size="xl">
+                <Button onClick={() => handleAction("reg-out")} disabled={actionLoading} size="xl">
                   {actionLoading ? <Loader2 className="animate-spin" /> : <LogOut />}
                   Reg Out
                 </Button>

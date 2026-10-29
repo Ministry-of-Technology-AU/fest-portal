@@ -3,6 +3,7 @@
 import { SessionProvider } from "next-auth/react"
 import { ReactNode } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
+import { OfflineProvider } from "@/components/offline-provider"
 
 interface ProvidersProps {
   children: ReactNode
@@ -15,7 +16,7 @@ export default function Providers({ children }: ProvidersProps) {
         refetchInterval={5*60}
         refetchOnWindowFocus={false}
       >
-        {children}
+        <OfflineProvider>{children}</OfflineProvider>
       </SessionProvider>
     </ThemeProvider>
   )

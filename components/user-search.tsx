@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { StatusPill } from "@/components/status-pill"
 import type { User } from "@/lib/types"
+import { getState, searchRoster } from "@/lib/offline/engine"
 
 interface UserSearchProps {
   onSelectUser: (user: User) => void
@@ -22,15 +23,25 @@ export function UserSearch({ onSelectUser, placeholder = "ID, name, email or pho
     const q = query.trim()
     if (!q) return
 
+    // Search the roster saved on this device: instant, and works offline
+    if (getState().users.size > 0) {
+      setResults(searchRoster(q))
+      setShowResults(true)
+      return
+    }
+
+    // First load on this device, before the roster has arrived
     setLoading(true)
     try {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`)
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`, {
+        signal: AbortSignal.timeout(10_000),
+      })
       const data = await res.json()
       setResults(data.users ?? [])
-      setShowResults(true)
     } catch {
       setResults([])
     } finally {
+      setShowResults(true)
       setLoading(false)
     }
   }
@@ -94,7 +105,9 @@ export function UserSearch({ onSelectUser, placeholder = "ID, name, email or pho
               </button>
             ))
           ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">No users found</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              {getState().users.size > 0 ? "No users found" : "No users found, or the server couldn't be reached"}
+            </div>
           )}
         </div>
       )}

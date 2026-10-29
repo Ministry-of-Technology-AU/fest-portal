@@ -1,5 +1,6 @@
 import type React from "react"
 import { Navigation } from "@/components/navigation"
+import { SyncStatus } from "@/components/sync-status"
 import { cn } from "@/lib/utils"
 
 interface AppShellProps {
@@ -18,6 +19,7 @@ export function AppShell({ children, width = "wide" }: AppShellProps) {
           width === "narrow" ? "max-w-3xl" : "max-w-7xl",
         )}
       >
+        <SyncStatus />
         {children}
       </main>
     </div>

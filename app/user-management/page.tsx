@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { useSession } from "next-auth/react"
+import { useOperator } from "@/components/offline-provider"
 import { Loader2, Plus, Save, UserCog, X } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function UserManagementPage() {
-  const { data: session } = useSession()
+  const { session } = useOperator()
   const isBanjaara = session?.user?.name === "banjaara"
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [editData, setEditData] = useState<Partial<User>>({})

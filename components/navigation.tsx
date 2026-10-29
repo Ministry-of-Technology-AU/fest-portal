@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { signOut, useSession } from "next-auth/react"
+import { signOutAndClear, useOperator } from "@/components/offline-provider"
+import { getState as getOfflineState } from "@/lib/offline/engine"
 import { LogOut, Menu, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -47,12 +48,21 @@ function initials(name: string | null | undefined) {
 export function Navigation() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const { data: session } = useSession()
+  const { session } = useOperator()
   const userRole = session?.user?.role
   const links = visibleNavLinks(userRole)
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" })
+    const unsent = getOfflineState().queue.length
+    if (
+      unsent > 0 &&
+      !window.confirm(
+        `${unsent} scan${unsent === 1 ? " hasn't" : "s haven't"} reached the server yet. Signing out deletes ${unsent === 1 ? "it" : "them"} from this device. Sign out anyway?`
+      )
+    ) {
+      return
+    }
+    await signOutAndClear()
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)

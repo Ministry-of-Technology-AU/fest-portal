@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { applyStatusChange } from '@/lib/status-change'
-import type { SecurityStatus } from '@/lib/types'
-
-// Which statuses each action can be applied from
-const TRANSITIONS: Record<string, { from: SecurityStatus[]; to: SecurityStatus }> = {
-  'gate-in': { from: ['gate-out'], to: 'gate-in' },
-  'gate-out': { from: ['reg-out', 'gate-in'], to: 'gate-out' },
-}
+import { applyStatusChange, parseClientOp } from '@/lib/status-change'
+import { transitionFor } from '@/lib/transitions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +15,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { userId, action } = await request.json()
+    const body = await request.json()
+    const { userId, action } = body
 
     if (!userId || !action) {
       return NextResponse.json(
@@ -30,7 +25,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const transition = TRANSITIONS[action]
+    const transition = transitionFor('gate', action)
     if (!transition) {
       return NextResponse.json(
         { error: `Unknown action: ${action}` },
@@ -44,6 +39,8 @@ export async function POST(request: NextRequest) {
       festId: session.user.role === 'admin' ? null : session.user.id,
       from: transition.from,
       to: transition.to,
+      // Sent by the offline queue: makes retries safe and records when the scan happened
+      ...parseClientOp(body),
       source: 'gate',
     })
 

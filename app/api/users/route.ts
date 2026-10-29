@@ -33,11 +33,15 @@ export async function GET(request: NextRequest) {
       whereClause.lastStatusTime = { gte: new Date(since.getTime() - SYNC_OVERLAP_MS) }
     }
 
+    // ?trail=0 skips the status history, which the offline roster on the desk
+    // devices doesn't show; it's most of the payload
+    const withTrail = request.nextUrl.searchParams.get('trail') !== '0'
+
     const users = await prisma.user.findMany({
       where: whereClause,
       include: {
         events: true,
-        status_trail: {
+        status_trail: withTrail && {
           orderBy: {
             timestamp: 'desc'
           }
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest) {
         lastStatusTime: user.lastStatusTime.toISOString(),
         festId: user.festId,
         additionalParams: user.additionalParams ?? undefined,
-        statusTrail: user.status_trail.map((trail: any) => ({
+        statusTrail: (user.status_trail ?? []).map((trail: any) => ({
           status: trail.status.replace('_', '-'),
           timestamp: trail.timestamp.toISOString(),
           source: trail.source
