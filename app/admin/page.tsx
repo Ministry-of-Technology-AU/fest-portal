@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { AlertCircle, ChevronRight, Loader2, RefreshCw, Search, ShieldCheck } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
@@ -132,7 +132,7 @@ const TAB_COPY: Record<SecurityStatus, { tab: string; heading: string; descripti
 const TAB_ORDER: SecurityStatus[] = ["gate-out", "gate-in", "reg-in", "reg-out"]
 
 export default function AdminPage() {
-  const { users, loading, error, refetch } = useUsers()
+  const { users, loading, error, refetch, syncChanges } = useUsers()
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [bandQuery, setBandQuery] = useState("")
@@ -145,17 +145,28 @@ export default function AdminPage() {
     setRefreshing(false)
   }
 
-  // Auto-refresh every 30 seconds
-  // useEffect(() => {
-  //   const interval = setInterval(async () => {
-  //     if (!refreshing) {
-  //       await refetch()
-  //       setLastUpdated(new Date())
-  //     }
-  //   }, 30000) // 30 seconds
+  // Auto-refresh: fetch only status changes every 15 seconds, and do a full
+  // reload every 5 minutes to pick up profile edits. Paused while the tab is
+  // hidden; catches up as soon as it's visible again.
+  useEffect(() => {
+    let ticks = 0
 
-  //   return () => clearInterval(interval)
-  // }, [refreshing, refetch])
+    const tick = async () => {
+      if (document.visibilityState !== "visible") return
+      ticks += 1
+      if (ticks % 20 === 0) await refetch()
+      else await syncChanges()
+      setLastUpdated(new Date())
+    }
+
+    const interval = setInterval(tick, 15_000)
+    document.addEventListener("visibilitychange", tick)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", tick)
+    }
+  }, [refetch, syncChanges])
 
   if (loading) {
     return (

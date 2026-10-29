@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import prisma from '@/lib/prisma'
+import { getEvents } from '@/lib/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,16 +15,7 @@ export async function GET(request: NextRequest) {
 
     // Admins could potentially see all events or we could filter by festUserId if provided in query
     // For now, let's just return events related to the logged-in fest user
-    const whereClause = session.user.role === 'admin' 
-      ? {} 
-      : { festId: session.user.id }
-
-    const events = await prisma.event.findMany({
-      where: whereClause,
-      orderBy: {
-        name: 'asc'
-      }
-    })
+    const events = await getEvents(session.user.role === 'admin' ? null : session.user.id)
 
     return NextResponse.json({
       events

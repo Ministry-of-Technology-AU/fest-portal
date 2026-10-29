@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { getFestUsers, invalidateCache } from '@/lib/cache'
 
 // GET - List all fest users (admin only)
 export async function GET(request: NextRequest) {
   try {
-    const festUsers = await prisma.fest_user.findMany({
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        // Exclude password from response
-      }
-    })
+    const festUsers = await getFestUsers()
 
     return NextResponse.json(festUsers)
   } catch (error) {
@@ -78,6 +69,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    invalidateCache('fest-users')
+
     return NextResponse.json({
       success: true,
       message: 'Fest user created successfully',
@@ -137,6 +130,8 @@ export async function PUT(request: NextRequest) {
       }
     })
 
+    invalidateCache('fest-users')
+
     return NextResponse.json({
       success: true,
       message: 'Fest user updated successfully',
@@ -168,6 +163,9 @@ export async function DELETE(request: NextRequest) {
     await prisma.fest_user.delete({
       where: { id: userId }
     })
+
+    // Deleting a fest user cascades to its events
+    invalidateCache('fest-users', 'events')
 
     return NextResponse.json({
       success: true,

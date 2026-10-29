@@ -29,11 +29,10 @@ export async function GET(request: NextRequest) {
     const users = await prisma.user.findMany({
       where: whereClause,
       take: 10,
+      // No status_trail: search results only show the current status, and
+      // skipping it saves a query on every scan
       include: {
         events: true,
-        status_trail: {
-          orderBy: { timestamp: 'desc' },
-        },
       },
       orderBy: { name: 'asc' },
     })
@@ -58,11 +57,7 @@ export async function GET(request: NextRequest) {
         lastStatusTime: user.lastStatusTime.toISOString(),
         festId: user.festId,
         additionalParams: user.additionalParams ?? undefined,
-        statusTrail: user.status_trail.map((t: any) => ({
-          status: t.status.replace('_', '-'),
-          timestamp: t.timestamp.toISOString(),
-          source: t.source,
-        })),
+        statusTrail: [],
       }
     })
 

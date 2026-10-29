@@ -52,7 +52,7 @@ export function Navigation() {
   const links = visibleNavLinks(userRole)
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/" })
+    await signOut({ callbackUrl: "/login" })
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
