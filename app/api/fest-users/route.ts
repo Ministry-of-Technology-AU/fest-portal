@@ -1,11 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { getFestUsers, invalidateCache } from '@/lib/cache'
 
+// Password accounts are desk logins. Admins sign in with Google and are checked
+// against ADMIN_EMAILS, so this route must never hand out the admin role.
+const ACCOUNT_ROLES = ['fest', 'staff']
+const MIN_PASSWORD_LENGTH = 8
+
+// proxy.ts also blocks non-admins from this route, but the route checks for
+// itself so it stays safe if the proxy matcher ever changes
+async function requireAdmin() {
+  const session = await auth()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  return null
+}
+
+function invalidAccountFields(password: unknown, role: unknown): string | null {
+  if (password !== undefined && (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH)) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+  }
+  if (role !== undefined && !ACCOUNT_ROLES.includes(role as string)) {
+    return `Role must be one of: ${ACCOUNT_ROLES.join(', ')}`
+  }
+  return null
+}
+
 // GET - List all fest users (admin only)
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAdmin()
+    if (denied) return denied
+
     const festUsers = await getFestUsers()
 
     return NextResponse.json(festUsers)
@@ -21,6 +53,9 @@ export async function GET(request: NextRequest) {
 // POST - Create new fest user (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const denied = await requireAdmin()
+    if (denied) return denied
+
     const { username, password, email, role = 'fest' } = await request.json()
 
     if (!username || !password || !email) {
@@ -28,6 +63,11 @@ export async function POST(request: NextRequest) {
         { error: 'Username, password, and email are required' },
         { status: 400 }
       )
+    }
+
+    const invalid = invalidAccountFields(password, role)
+    if (invalid) {
+      return NextResponse.json({ error: invalid }, { status: 400 })
     }
 
     // Check if username or email already exists
@@ -89,6 +129,9 @@ export async function POST(request: NextRequest) {
 // PUT - Update fest user password (admin only)
 export async function PUT(request: NextRequest) {
   try {
+    const denied = await requireAdmin()
+    if (denied) return denied
+
     const { userId, password, role } = await request.json()
 
     if (!userId) {
@@ -96,6 +139,11 @@ export async function PUT(request: NextRequest) {
         { error: 'User ID is required' },
         { status: 400 }
       )
+    }
+
+    const invalid = invalidAccountFields(password || undefined, role || undefined)
+    if (invalid) {
+      return NextResponse.json({ error: invalid }, { status: 400 })
     }
 
     const updateData: any = {}
@@ -150,6 +198,9 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete fest user (admin only)
 export async function DELETE(request: NextRequest) {
   try {
+    const denied = await requireAdmin()
+    if (denied) return denied
+
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 

@@ -7,7 +7,7 @@ import { clearOfflineData, start } from "@/lib/offline/engine"
 import { visibleNavLinks } from "@/lib/nav"
 
 // next-auth treats a failed session check as "signed out", so on a bad
-// connection the desks would lose the operator (and the Banjaara fields) every
+// connection the desks would lose the operator (and the band fields) every
 // time its 5-minute check failed. This keeps the last confirmed session on the
 // device and only drops it when the server actually says the session is gone.
 

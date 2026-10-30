@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { useOperator } from "@/components/offline-provider"
+import { tracksBands } from "@/lib/bands"
 import { ClipboardCheck, Flag, Loader2, LogIn, LogOut } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
@@ -27,14 +28,14 @@ export default function RegistrationPage() {
   const [outDeskNumber, setOutDeskNumber] = useState("")
   const [flagNote, setFlagNote] = useState("")
 
-  const isBanjaara = session?.user?.name === "banjaara"
+  const showBandFields = tracksBands(session?.user?.name)
   // Follows background syncs, so the status shown is the latest this device knows
   const selectedUser = useStudent(picked?.id ?? null, picked)
 
   const handleSelectUser = (user: User | null) => {
     setPicked(user)
     if (user) refreshStudent(user.id)
-    if (isBanjaara && user?.additionalParams) {
+    if (showBandFields && user?.additionalParams) {
       setBandNumber((user.additionalParams.bandNumber as string) ?? "")
       setInDeskNumber((user.additionalParams.inDeskNumber as string) ?? "")
       setOutDeskNumber((user.additionalParams.outDeskNumber as string) ?? "")
@@ -50,16 +51,16 @@ export default function RegistrationPage() {
   const handleAction = async (action: StatusAction) => {
     if (!selectedUser || actionLoading) return
 
-    if (isBanjaara && action === "reg-in" && (!bandNumber.trim() || !inDeskNumber.trim())) {
+    if (showBandFields && action === "reg-in" && (!bandNumber.trim() || !inDeskNumber.trim())) {
       toast.error("Band number and in-desk number are required")
       return
     }
-    if (isBanjaara && action === "reg-out" && !outDeskNumber.trim()) {
+    if (showBandFields && action === "reg-out" && !outDeskNumber.trim()) {
       toast.error("Out-desk number is required")
       return
     }
 
-    const additionalParams = !isBanjaara
+    const additionalParams = !showBandFields
       ? undefined
       : action === "reg-in"
         ? { bandNumber: bandNumber.trim(), inDeskNumber: inDeskNumber.trim(), flagNote: flagNote.trim() }
@@ -104,7 +105,7 @@ export default function RegistrationPage() {
               </>
             }
           >
-            {isBanjaara && (
+            {showBandFields && (
               <div className="space-y-3 border-t pt-5">
                 {!!selectedUser.additionalParams?.flagNote && (
                   <div className="flex gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
@@ -115,7 +116,7 @@ export default function RegistrationPage() {
                     </div>
                   </div>
                 )}
-                <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Banjaara details</p>
+                <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Band details</p>
                 <div className="grid grid-cols-1 gap-3 xs:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="bandNumber">Band Number</Label>

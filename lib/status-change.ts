@@ -1,4 +1,3 @@
-import { Prisma } from '@/lib/generated/prisma'
 import prisma from '@/lib/prisma'
 import type { SecurityStatus } from '@/lib/types'
 
@@ -56,24 +55,32 @@ export function parseClientOp(body: { opId?: unknown; scannedAt?: unknown }) {
 export async function applyStatusChange(change: StatusChange): Promise<StatusChangeResult> {
   const { userId, festId, from, to, source, additionalParams, clientOpId, scannedAt } = change
 
+  const additionalJson = additionalParams ? JSON.stringify(additionalParams) : null
+  const scannedIso = scannedAt ? scannedAt.toISOString() : null
+
+  // Optional parts are plain parameters with SQL-side defaults rather than
+  // nested Prisma.sql fragments: after a dev hot reload the cached client can't
+  // recognise fragments from the reloaded module and sends them as values.
+  //
   // lastStatusTime is always the server's time, because the incremental sync in
   // /api/users looks for changes by it. Only the trail entry gets the scan time.
   const rows = await prisma.$queryRaw<{ id: string; currentStatus: SecurityStatus; lastStatusTime: Date }[]>`
     WITH updated AS (
       UPDATE "user"
       SET "currentStatus" = ${to}::"user_currentStatus",
-          "lastStatusTime" = now() AT TIME ZONE 'UTC'
-          ${additionalParams
-            ? Prisma.sql`, "additionalParams" = COALESCE("additionalParams", '{}'::jsonb) || ${JSON.stringify(additionalParams)}::jsonb`
-            : Prisma.empty}
+          "lastStatusTime" = now() AT TIME ZONE 'UTC',
+          "additionalParams" = CASE
+            WHEN ${additionalJson}::jsonb IS NULL THEN "additionalParams"
+            ELSE COALESCE("additionalParams", '{}'::jsonb) || ${additionalJson}::jsonb
+          END
       WHERE id = ${userId}
-        ${festId ? Prisma.sql`AND "festId" = ${festId}` : Prisma.empty}
+        AND (${festId}::text IS NULL OR "festId" = ${festId}::text)
         AND "currentStatus"::text = ANY(${from}::text[])
       RETURNING id, "currentStatus"::text AS "currentStatus", "lastStatusTime"
     ), trail AS (
       INSERT INTO status_trail ("userId", status, "timestamp", source, "clientOpId")
       SELECT id, ${to}::status_trail_status,
-        ${scannedAt ? Prisma.sql`${scannedAt.toISOString()}::timestamptz AT TIME ZONE 'UTC'` : Prisma.sql`"lastStatusTime"`},
+        COALESCE(${scannedIso}::timestamptz AT TIME ZONE 'UTC', "lastStatusTime"),
         ${source}::status_trail_source, ${clientOpId ?? null}::varchar
       FROM updated
     )

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { useOperator } from "@/components/offline-provider"
+import { tracksBands } from "@/lib/bands"
 import { Loader2, Plus, Save, UserCog, X } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
@@ -20,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function UserManagementPage() {
   const { session } = useOperator()
-  const isBanjaara = session?.user?.name === "banjaara"
+  const showBandFields = tracksBands(session?.user?.name)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [editData, setEditData] = useState<Partial<User>>({})
   const [actionLoading, setActionLoading] = useState(false)
@@ -397,9 +398,9 @@ export default function UserManagementPage() {
                 )}
               </div>
 
-              {isBanjaara && (
+              {showBandFields && (
                 <div className="space-y-3 border-t pt-5">
-                  <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Banjaara details</p>
+                  <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Band details</p>
                   <div className="grid grid-cols-1 gap-3 xs:grid-cols-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-band">Band Number</Label>

@@ -25,7 +25,7 @@ const ATTACHMENTS = [
 export async function sendEmail(receiver: string, subject: string, body: string, html?: string) {
   try {
     const info = await transporter.sendMail({
-      from: `"Banjaara 2026" <${process.env.SMTP_USER}>`,
+      from: `"Shatranj 2026" <${process.env.SMTP_USER}>`,
       to: receiver,
       subject,
       text: body,
