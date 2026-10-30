@@ -1,18 +1,142 @@
 "use client"
 
-import React, { useState } from "react"
-import { Navigation } from "@/components/navigation"
+import React, { useEffect, useState } from "react"
+import { AlertCircle, ChevronRight, Loader2, RefreshCw, Search, ShieldCheck } from "lucide-react"
+import { AppShell } from "@/components/app-shell"
+import { PageHeader } from "@/components/page-header"
+import { StatusPill } from "@/components/status-pill"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import type { User, SecurityStatus } from "@/lib/types"
+import { getStatusStyle } from "@/lib/status"
 import { useUsers } from "@/lib/api"
+import { cn } from "@/lib/utils"
+
+function UserTable({ users }: { users: User[] }) {
+  const [expandedUser, setExpandedUser] = useState<string | null>(null)
+
+  if (users.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
+        No students in this status
+      </div>
+    )
+  }
+
+  return (
+    <div className="-mx-4 overflow-x-auto sm:mx-0 sm:rounded-lg sm:border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-y bg-muted/70 text-left text-xs tracking-wider text-muted-foreground uppercase sm:border-t-0">
+            <th className="px-4 py-3 font-bold">Name</th>
+            <th className="px-4 py-3 font-bold">ID</th>
+            <th className="hidden px-4 py-3 font-bold md:table-cell">College</th>
+            <th className="px-4 py-3 font-bold">Status</th>
+            <th className="hidden px-4 py-3 font-bold lg:table-cell">Last Updated</th>
+            <th className="hidden px-4 py-3 font-bold sm:table-cell">Events</th>
+            <th className="px-4 py-3 text-right font-bold">Trail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((user) => {
+            const expanded = expandedUser === user.id
+            return (
+              <React.Fragment key={user.id}>
+                <tr className={cn("border-b transition-colors hover:bg-accent/60", expanded && "bg-accent/60")}>
+                  <td className="px-4 py-3">
+                    <div className="font-semibold">{user.name}</div>
+                    <div className="text-xs text-muted-foreground md:hidden">{user.collegeName}</div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">{user.id}</td>
+                  <td className="hidden px-4 py-3 md:table-cell">{user.collegeName}</td>
+                  <td className="px-4 py-3">
+                    <StatusPill status={user.currentStatus} />
+                  </td>
+                  <td className="hidden px-4 py-3 text-xs whitespace-nowrap text-muted-foreground lg:table-cell">
+                    {new Date(user.lastStatusTime).toLocaleString()}
+                  </td>
+                  <td className="hidden px-4 py-3 text-xs sm:table-cell">{user.eventsRegistered.length} events</td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setExpandedUser(expanded ? null : user.id)}
+                      aria-expanded={expanded}
+                      className="text-xs whitespace-nowrap"
+                    >
+                      {user.statusTrail.length}
+                      <ChevronRight className={cn("size-3.5 transition-transform", expanded && "rotate-90")} />
+                    </Button>
+                  </td>
+                </tr>
+                {expanded && (
+                  <tr className="border-b bg-muted/40">
+                    <td colSpan={7} className="px-4 py-4">
+                      <h4 className="mb-2 text-sm font-bold">Status trail for {user.name}</h4>
+                      <ol className="max-h-48 space-y-1.5 overflow-y-auto">
+                        {user.statusTrail.slice().reverse().map((entry, index) => (
+                          <li
+                            key={`${user.id}-trail-${index}`}
+                            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-card px-3 py-2 text-xs"
+                          >
+                            <StatusPill status={entry.status} />
+                            <span className="text-muted-foreground">{new Date(entry.timestamp).toLocaleString()}</span>
+                            <span className="text-muted-foreground capitalize">via {entry.source}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+const STAT_CARDS: { status: SecurityStatus; title: string }[] = [
+  { status: "gate-in", title: "Inside gate, not registered" },
+  { status: "reg-in", title: "Inside gate and registered" },
+  { status: "reg-out", title: "Registered out, still inside" },
+  { status: "gate-out", title: "Outside gate" },
+]
+
+const TAB_COPY: Record<SecurityStatus, { tab: string; heading: string; description: string }> = {
+  "gate-out": {
+    tab: "Outside Gate",
+    heading: "Students Outside Gate",
+    description: "Students who are currently outside the campus gates",
+  },
+  "gate-in": {
+    tab: "Inside Gate",
+    heading: "Students Inside Gate",
+    description: "Students who have entered the campus but haven't registered yet",
+  },
+  "reg-in": {
+    tab: "Registered In",
+    heading: "Currently Registered Students",
+    description: "Students who are registered in and participating in events",
+  },
+  "reg-out": {
+    tab: "Registered Out",
+    heading: "Registration Complete",
+    description: "Students who have registered but haven't left the gate",
+  },
+}
+
+const TAB_ORDER: SecurityStatus[] = ["gate-out", "gate-in", "reg-in", "reg-out"]
 
 export default function AdminPage() {
-  const { users, loading, error, refetch } = useUsers()
+  const { users, loading, error, refetch, syncChanges } = useUsers()
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [bandQuery, setBandQuery] = useState("")
+  const [activeTab, setActiveTab] = useState<string>("gate-out")
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -21,54 +145,52 @@ export default function AdminPage() {
     setRefreshing(false)
   }
 
-  // Auto-refresh every 30 seconds
-  // useEffect(() => {
-  //   const interval = setInterval(async () => {
-  //     if (!refreshing) {
-  //       await refetch()
-  //       setLastUpdated(new Date())
-  //     }
-  //   }, 30000) // 30 seconds
+  // Auto-refresh: fetch only status changes every 15 seconds, and do a full
+  // reload every 5 minutes to pick up profile edits. Paused while the tab is
+  // hidden; catches up as soon as it's visible again.
+  useEffect(() => {
+    let ticks = 0
 
-  //   return () => clearInterval(interval)
-  // }, [refreshing, refetch])
+    const tick = async () => {
+      if (document.visibilityState !== "visible") return
+      ticks += 1
+      if (ticks % 20 === 0) await refetch()
+      else await syncChanges()
+      setLastUpdated(new Date())
+    }
+
+    const interval = setInterval(tick, 15_000)
+    document.addEventListener("visibilitychange", tick)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", tick)
+    }
+  }, [refetch, syncChanges])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading admin dashboard...</p>
-          </div>
-        </main>
-      </div>
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="mt-4">Loading admin dashboard...</p>
+        </div>
+      </AppShell>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="text-red-500 mb-4">
-              <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-lg font-semibold">Error Loading Dashboard</p>
-              <p className="text-sm text-muted-foreground mt-1">{error}</p>
-            </div>
-            <button 
-              onClick={refetch}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-            >
-              Retry
-            </button>
-          </div>
-        </main>
-      </div>
+      <AppShell>
+        <div className="mx-auto flex max-w-md flex-col items-center py-24 text-center">
+          <AlertCircle className="mb-3 size-10 text-destructive" />
+          <p className="text-lg font-bold">Error Loading Dashboard</p>
+          <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+          <Button onClick={refetch} className="mt-6">
+            Retry
+          </Button>
+        </div>
+      </AppShell>
     )
   }
 
@@ -88,259 +210,137 @@ export default function AdminPage() {
     : []
 
   // Filter users by status
-  const gateOutUsers = users.filter((u) => u.currentStatus === "gate-out")
-  const gateInUsers = users.filter((u) => u.currentStatus === "gate-in")
-  const regInUsers = users.filter((u) => u.currentStatus === "reg-in")
-  const regOutUsers = users.filter((u) => u.currentStatus === "reg-out")
-
-  const getStatusDisplay = (status: SecurityStatus) => {
-    const statusConfig = {
-      "gate-out": { label: "Gate-Out", color: "text-gray-600", bgColor: "bg-gray-100 text-gray-600" },
-      "gate-in": { label: "Gate-In", color: "text-green-600", bgColor: "bg-green-100 text-green-600" },
-      "reg-in": { label: "Registration-In", color: "text-blue-600", bgColor: "bg-blue-100 text-blue-600" },
-      "reg-out": { label: "Registration-Out", color: "text-purple-600", bgColor: "bg-purple-100 text-purple-600" },
-    }
-    return statusConfig[status]
-  }
-
-  const UserTable = ({ users }: { users: User[] }) => {
-    const [expandedUser, setExpandedUser] = useState<string | null>(null)
-
-    if (users.length === 0) {
-      return (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>No students in this status</p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted">
-              <th className="text-left p-3 font-semibold">Name</th>
-              <th className="text-left p-3 font-semibold">ID</th>
-              <th className="text-left p-3 font-semibold">College</th>
-              <th className="text-left p-3 font-semibold">Current Status</th>
-              <th className="text-left p-3 font-semibold">Last Updated</th>
-              <th className="text-left p-3 font-semibold">Events</th>
-              <th className="text-left p-3 font-semibold">Trail</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <React.Fragment key={user.id}>
-                <tr className="border-b hover:bg-muted/50">
-                  <td className="p-3">{user.name}</td>
-                  <td className="p-3 font-mono">{user.id}</td>
-                  <td className="p-3 text-sm">{user.collegeName}</td>
-                  <td className="p-3">
-                    <span className={`font-medium ${getStatusDisplay(user.currentStatus).color}`}>
-                      {getStatusDisplay(user.currentStatus).label}
-                    </span>
-                  </td>
-                  <td className="p-3 text-xs">
-                    {new Date(user.lastStatusTime).toLocaleString()}
-                  </td>
-                  <td className="p-3 text-xs">
-                    {user.eventsRegistered.length} events
-                  </td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
-                      className="text-xs bg-secondary hover:bg-secondary/80 px-2 py-1 rounded text-secondary-foreground"
-                    >
-                      {user.statusTrail.length} entries {expandedUser === user.id ? '▼' : '▶'}
-                    </button>
-                  </td>
-                </tr>
-                {expandedUser === user.id && (
-                  <tr>
-                    <td colSpan={7} className="p-3 bg-muted/30">
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-sm">Status Trail for {user.name}</h4>
-                        <div className="space-y-1 max-h-40 overflow-y-auto">
-                          {user.statusTrail.slice().reverse().map((entry, index) => (
-                            <div key={`${user.id}-trail-${index}`} className="flex items-center gap-3 text-xs p-2 bg-background rounded">
-                              <span className={`px-2 py-1 rounded text-xs ${getStatusDisplay(entry.status).bgColor}`}>
-                                {getStatusDisplay(entry.status).label}
-                              </span>
-                              <span className="text-muted-foreground">
-                                {new Date(entry.timestamp).toLocaleString()}
-                              </span>
-                              <span className="text-muted-foreground capitalize">
-                                via {entry.source}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )
+  const usersByStatus: Record<SecurityStatus, User[]> = {
+    "gate-out": users.filter((u) => u.currentStatus === "gate-out"),
+    "gate-in": users.filter((u) => u.currentStatus === "gate-in"),
+    "reg-in": users.filter((u) => u.currentStatus === "reg-in"),
+    "reg-out": users.filter((u) => u.currentStatus === "reg-out"),
   }
 
   return (
-    <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          <div className="mb-8 flex justify-between items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-foreground">Admin Dashboard</h2>
-              <p className="text-muted-foreground mt-2">Monitor all portal activity and student status</p>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
+    <AppShell>
+      <PageHeader
+        icon={ShieldCheck}
+        eyebrow="Admin"
+        title="Admin Dashboard"
+        description="Monitor all portal activity and student status."
+        actions={
+          <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
+            <RefreshCw className={cn(refreshing && "animate-spin")} />
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        }
+      />
 
-          {/* Real-time Status Indicator */}
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Live data from database</span>
-              <span>•</span>
-              <span>Total: {users.length} students</span>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Last updated: {lastUpdated.toLocaleTimeString()}
-              <span className="ml-2 text-green-600">• Auto-refresh: 30s</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 mb-8 text-xs text-muted-foreground">
-            <span>Gate-ins on 11 Apr: <span className="font-semibold text-orange-600">{day11GateIns}</span></span>
-            <span>•</span>
-            <span>Gate-ins on 12 Apr: <span className="font-semibold text-orange-600">{day12GateIns}</span></span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">            
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Inside Gate Not Registered</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{gateInUsers.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Gate-In</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Gate In and Registered</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{regInUsers.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Registration-In</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Registered Out but Gate In</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{regOutUsers.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Registration-Out</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Outside Gate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-600">{gateOutUsers.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Gate-Out</p>
-              </CardContent>
-            </Card>
-
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Student Status Overview</CardTitle>
-              <CardDescription>View detailed status of all students</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="gate-out" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="gate-out">Outside Gate ({gateOutUsers.length})</TabsTrigger>
-                  <TabsTrigger value="gate-in">Inside Gate ({gateInUsers.length})</TabsTrigger>
-                  <TabsTrigger value="reg-in">Registered In ({regInUsers.length})</TabsTrigger>
-                  <TabsTrigger value="reg-out">Registered Out ({regOutUsers.length})</TabsTrigger>
-                  <TabsTrigger value="band-search">Band Search</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="gate-out" className="mt-4">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-600">Students Outside Gate</h3>
-                    <p className="text-sm text-muted-foreground">Students who are currently outside the campus gates</p>
-                  </div>
-                  <UserTable users={gateOutUsers} />
-                </TabsContent>
-
-                <TabsContent value="gate-in" className="mt-4">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-green-600">Students Inside Gate</h3>
-                    <p className="text-sm text-muted-foreground">Students who have entered the campus but haven't registered yet</p>
-                  </div>
-                  <UserTable users={gateInUsers} />
-                </TabsContent>
-
-                <TabsContent value="reg-in" className="mt-4">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-blue-600">Currently Registered Students</h3>
-                    <p className="text-sm text-muted-foreground">Students who are registered in and participating in events</p>
-                  </div>
-                  <UserTable users={regInUsers} />
-                </TabsContent>
-
-                <TabsContent value="reg-out" className="mt-4">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-purple-600">Registration Complete</h3>
-                    <p className="text-sm text-muted-foreground">Students who have registered but haven't left the gate</p>
-                  </div>
-                  <UserTable users={regOutUsers} />
-                </TabsContent>
-
-                <TabsContent value="band-search" className="mt-4">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-foreground">Band Search</h3>
-                    <p className="text-sm text-muted-foreground">Find all participants assigned to a specific band number</p>
-                  </div>
-                  <div className="mb-4 max-w-xs">
-                    <Input
-                      placeholder="Enter band number e.g. B3"
-                      value={bandQuery}
-                      onChange={(e) => setBandQuery(e.target.value)}
-                    />
-                  </div>
-                  {bandQuery.trim() && (
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {bandUsers.length} participant{bandUsers.length !== 1 ? "s" : ""} found for band <strong>{bandQuery.trim()}</strong>
-                    </p>
-                  )}
-                  {bandQuery.trim() && <UserTable users={bandUsers} />}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </main>
+      {/* Live strip */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground sm:text-sm">
+        <span className="inline-flex items-center gap-2">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-green opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-green" />
+          </span>
+          Live data from database
+        </span>
+        <span>
+          Total: <strong className="text-foreground">{users.length}</strong> students
+        </span>
+        <span>Last updated {lastUpdated.toLocaleTimeString()}</span>
+        <span className="inline-flex gap-3">
+          <span>
+            11 Apr gate-ins: <strong className="text-secondary-extradark">{day11GateIns}</strong>
+          </span>
+          <span>
+            12 Apr gate-ins: <strong className="text-secondary-extradark">{day12GateIns}</strong>
+          </span>
+        </span>
       </div>
+
+      {/* Stat cards double as tab shortcuts */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {STAT_CARDS.map(({ status, title }, index) => {
+          const style = getStatusStyle(status)
+          const active = activeTab === status
+          return (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setActiveTab(status)}
+              style={{ animationDelay: `${index * 50}ms` }}
+              className={cn(
+                "group relative animate-rise overflow-hidden rounded-xl border bg-card p-4 text-left shadow-[0_1px_2px_rgba(60,20,10,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5",
+                active && "border-primary/50 ring-2 ring-primary/20",
+              )}
+            >
+              <span className={cn("absolute inset-x-0 top-0 h-1", style.dot)} aria-hidden />
+              <p className="text-xs leading-snug font-semibold text-muted-foreground sm:text-sm">{title}</p>
+              <p className={cn("mt-2 font-heading text-3xl font-extrabold tabular-nums sm:text-4xl", style.text)}>
+                {usersByStatus[status].length}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{style.label}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Student Status Overview</CardTitle>
+          <CardDescription>View detailed status of all students</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+              <TabsList className="w-max min-w-full justify-start">
+                {TAB_ORDER.map((status) => (
+                  <TabsTrigger key={status} value={status} className="flex-none sm:flex-1">
+                    {TAB_COPY[status].tab}
+                    <span className="rounded-full bg-black/5 px-1.5 text-[11px] tabular-nums dark:bg-white/10">
+                      {usersByStatus[status].length}
+                    </span>
+                  </TabsTrigger>
+                ))}
+                <TabsTrigger value="band-search" className="flex-none sm:flex-1">
+                  <Search />
+                  Band Search
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {TAB_ORDER.map((status) => (
+              <TabsContent key={status} value={status} className="mt-4">
+                <div className="mb-4">
+                  <h3 className={cn("text-lg font-bold", getStatusStyle(status).text)}>{TAB_COPY[status].heading}</h3>
+                  <p className="text-sm text-muted-foreground">{TAB_COPY[status].description}</p>
+                </div>
+                <UserTable users={usersByStatus[status]} />
+              </TabsContent>
+            ))}
+
+            <TabsContent value="band-search" className="mt-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold">Band Search</h3>
+                <p className="text-sm text-muted-foreground">Find all participants assigned to a specific band number</p>
+              </div>
+              <div className="relative mb-4 max-w-xs">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Band number, e.g. B3"
+                  value={bandQuery}
+                  onChange={(e) => setBandQuery(e.target.value)}
+                  className="h-10 pl-9"
+                />
+              </div>
+              {bandQuery.trim() && (
+                <p className="mb-3 text-sm text-muted-foreground">
+                  {bandUsers.length} participant{bandUsers.length !== 1 ? "s" : ""} found for band{" "}
+                  <strong className="text-foreground">{bandQuery.trim()}</strong>
+                </p>
+              )}
+              {bandQuery.trim() && <UserTable users={bandUsers} />}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </AppShell>
   )
 }

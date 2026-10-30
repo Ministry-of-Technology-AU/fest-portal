@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { useSession } from "next-auth/react"
-import { Navigation } from "@/components/navigation"
+import { useOperator } from "@/components/offline-provider"
+import { tracksBands } from "@/lib/bands"
+import { Loader2, Plus, Save, UserCog, X } from "lucide-react"
+import { AppShell } from "@/components/app-shell"
+import { PageHeader } from "@/components/page-header"
+import { StatusPill } from "@/components/status-pill"
 import { UserSearch } from "@/components/user-search"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import type { User } from "@/lib/types"
 import { updateUser } from "@/lib/api"
@@ -17,8 +20,8 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function UserManagementPage() {
-  const { data: session } = useSession()
-  const isBanjaara = session?.user?.name === "banjaara"
+  const { session } = useOperator()
+  const showBandFields = tracksBands(session?.user?.name)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [editData, setEditData] = useState<Partial<User>>({})
   const [actionLoading, setActionLoading] = useState(false)
@@ -67,12 +70,7 @@ export default function UserManagementPage() {
       await updateUser(selectedUser.id, editData)
 
       toast.success("User updated successfully", {
-        description: `Information for ${selectedUser.name} has been updated`,
-        style: {
-          background: '#10b981',
-          color: 'white',
-          border: '1px solid #059669'
-        }
+        description: `Information for ${selectedUser.name} has been updated`
       })
 
       // Refresh the users list and clear selection
@@ -80,12 +78,7 @@ export default function UserManagementPage() {
       setEditData({})
     } catch (error) {
       toast.error("Failed to update user", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        style: {
-          background: '#ef4444',
-          color: 'white',
-          border: '1px solid #dc2626'
-        }
+        description: error instanceof Error ? error.message : "Unknown error occurred"
       })
     } finally {
       setActionLoading(false)
@@ -115,12 +108,7 @@ export default function UserManagementPage() {
 
       if (response.ok) {
         toast.success("User created successfully", {
-          description: `${newUserData.name} has been added with ID: ${result.user.id}`,
-          style: {
-            background: '#10b981',
-            color: 'white',
-            border: '1px solid #059669'
-          }
+          description: `${newUserData.name} has been added with ID: ${result.user.id}`
         })
         setNewUserData({ name: '', email: '', phoneNumber: '', collegeName: '', eventsRegistered: [] })
         setIsAddOpen(false)
@@ -134,26 +122,25 @@ export default function UserManagementPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-foreground">User Management</h2>
-            <p className="text-muted-foreground mt-2">Update or replace student information</p>
-          </div>
+  const toggleEvent = (list: string[], event: string, checked: boolean) =>
+    checked ? [...list, event] : list.filter((e) => e !== event)
 
+  return (
+    <AppShell width="narrow">
+      <PageHeader
+        icon={UserCog}
+        eyebrow="Records"
+        title="User Management"
+        description="Update or replace student information."
+        actions={
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
+              <Button>
+                <Plus />
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
@@ -161,8 +148,8 @@ export default function UserManagementPage() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateUser} className="space-y-4">
-                <div>
-                  <Label htmlFor="new-name" className="mb-2 block">Name <span className="text-red-500">*</span></Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-name">Name <span className="text-destructive">*</span></Label>
                   <Input
                     id="new-name"
                     value={newUserData.name}
@@ -171,29 +158,32 @@ export default function UserManagementPage() {
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="new-email" className="mb-2 block">Email <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="new-email"
-                    type="email"
-                    value={newUserData.email}
-                    onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="Enter email address"
-                    required
-                  />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-email">Email <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="new-email"
+                      type="email"
+                      value={newUserData.email}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Email address"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-phone">Phone <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="new-phone"
+                      type="tel"
+                      value={newUserData.phoneNumber}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                      placeholder="Phone number"
+                      required
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="new-phone" className="mb-2 block">Phone Number <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="new-phone"
-                    value={newUserData.phoneNumber}
-                    onChange={(e) => setNewUserData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                    placeholder="Enter phone number"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new-college" className="mb-2 block">College Name</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-college">College Name</Label>
                   <Input
                     id="new-college"
                     value={newUserData.collegeName}
@@ -202,32 +192,27 @@ export default function UserManagementPage() {
                     required
                   />
                 </div>
-                <div>
-                  <Label className="mb-2 block">Register for Events</Label>
-                  <Card className="border p-0">
+                <div className="space-y-1.5">
+                  <Label>Register for Events</Label>
+                  <div className="rounded-lg border bg-muted/30">
                     <ScrollArea className="h-[150px] p-2">
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                         {availableEvents.length > 0 ? (
                           availableEvents.map((event) => (
-                            <div key={event} className="flex items-center space-x-2 p-1">
-                              <Checkbox 
-                                id={`new-event-${event}`} 
+                            <label
+                              key={event}
+                              htmlFor={`new-event-${event}`}
+                              className="flex cursor-pointer items-center gap-2 rounded-md p-1.5 text-sm font-medium hover:bg-accent"
+                            >
+                              <Checkbox
+                                id={`new-event-${event}`}
                                 checked={newUserData.eventsRegistered.includes(event)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setNewUserData(prev => ({ ...prev, eventsRegistered: [...prev.eventsRegistered, event] }))
-                                  } else {
-                                    setNewUserData(prev => ({ ...prev, eventsRegistered: prev.eventsRegistered.filter(e => e !== event) }))
-                                  }
-                                }}
+                                onCheckedChange={(checked) =>
+                                  setNewUserData(prev => ({ ...prev, eventsRegistered: toggleEvent(prev.eventsRegistered, event, !!checked) }))
+                                }
                               />
-                              <label
-                                htmlFor={`new-event-${event}`}
-                                className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                {event}
-                              </label>
-                            </div>
+                              {event}
+                            </label>
                           ))
                         ) : (
                           <div className="col-span-full p-2 text-center text-xs text-muted-foreground italic">
@@ -236,249 +221,268 @@ export default function UserManagementPage() {
                         )}
                       </div>
                     </ScrollArea>
-                  </Card>
-                  
-                  <div className="mt-2">
-                    <Label htmlFor="new-manual-event" className="text-[10px] text-muted-foreground">Add Custom Event</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        id="new-manual-event"
-                        placeholder="Type event name..."
-                        className="h-8 text-xs"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const val = (e.currentTarget as HTMLInputElement).value.trim();
-                            if (val && !newUserData.eventsRegistered.includes(val)) {
-                              setNewUserData(prev => ({ ...prev, eventsRegistered: [...prev.eventsRegistered, val] }));
-                              (e.currentTarget as HTMLInputElement).value = '';
-                            }
-                          }
-                        }}
-                      />
-                    </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    {newUserData.eventsRegistered.map(event => (
-                      <Badge key={event} variant="secondary" className="text-[10px] pr-1">
-                        {event}
-                        <button 
-                          className="ml-1 hover:text-destructive"
-                          onClick={() => setNewUserData(prev => ({ ...prev, eventsRegistered: prev.eventsRegistered.filter(e => e !== event) }))}
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
+                  <Input
+                    id="new-manual-event"
+                    aria-label="Add custom event"
+                    placeholder="Add a custom event and press Enter"
+                    className="mt-2 h-9 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = (e.currentTarget as HTMLInputElement).value.trim();
+                        if (val && !newUserData.eventsRegistered.includes(val)) {
+                          setNewUserData(prev => ({ ...prev, eventsRegistered: [...prev.eventsRegistered, val] }));
+                          (e.currentTarget as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
+
+                  {newUserData.eventsRegistered.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {newUserData.eventsRegistered.map(event => (
+                        <Badge key={event} variant="secondary" className="gap-1 pr-1">
+                          {event}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${event}`}
+                            className="rounded-sm p-0.5 hover:bg-black/10 hover:text-destructive"
+                            onClick={() => setNewUserData(prev => ({ ...prev, eventsRegistered: prev.eventsRegistered.filter(e => e !== event) }))}
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isCreating}>
+                    {isCreating && <Loader2 className="animate-spin" />}
                     {isCreating ? 'Creating...' : 'Add User'}
                   </Button>
                 </div>
               </form>
             </DialogContent>
           </Dialog>
-        </div>
+        }
+      />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Search Student</CardTitle>
-            <CardDescription>Find student by ID or name to edit</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <UserSearch onSelectUser={handleSelectUser} />
+      <div className="space-y-5">
+        <UserSearch onSelectUser={handleSelectUser} />
 
-            {selectedUser && (
-              <Card className="bg-muted/50 border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-lg">Edit Student Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Name</label>
-                      <Input
-                        value={editData.name || ""}
-                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Student ID</label>
-                      <Input value={editData.id || ""} disabled className="mt-1" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">College Name</label>
-                      <Input
-                        value={editData.collegeName || ""}
-                        onChange={(e) => setEditData({ ...editData, collegeName: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Email</label>
-                      <Input
-                        value={editData.email || ""}
-                        onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-sm font-medium">Phone Number</label>
-                      <Input
-                        value={editData.phoneNumber || ""}
-                        onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-sm font-medium mb-2 block">Events Registered</label>
-                      <Card className="border p-0 mb-3">
-                        <ScrollArea className="h-[150px] p-2">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {availableEvents.length > 0 ? (
-                              availableEvents.map((event) => (
-                                <div key={event} className="flex items-center space-x-2 p-1">
-                                  <Checkbox 
-                                    id={`edit-event-${event}`} 
-                                    checked={editData.eventsRegistered?.includes(event) || false}
-                                    onCheckedChange={(checked) => {
-                                      const current = editData.eventsRegistered || [];
-                                      if (checked) {
-                                        setEditData({ ...editData, eventsRegistered: [...current, event] })
-                                      } else {
-                                        setEditData({ ...editData, eventsRegistered: current.filter((e: string) => e !== event) })
-                                      }
-                                    }}
-                                  />
-                                  <label
-                                    htmlFor={`edit-event-${event}`}
-                                    className="text-sm font-medium leading-none cursor-pointer"
-                                  >
-                                    {event}
-                                  </label>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="col-span-full p-2 text-center text-xs text-muted-foreground italic">
-                                {fetchingEvents ? 'Loading events...' : 'No existing events found.'}
-                              </div>
-                            )}
-                          </div>
-                        </ScrollArea>
-                      </Card>
+        {selectedUser ? (
+          <section key={selectedUser.id} className="animate-rise overflow-hidden rounded-xl border border-primary/20 bg-card shadow-sm">
+            <div className="flex items-start justify-between gap-3 border-b bg-primary/[0.04] px-4 py-4 sm:px-6 dark:bg-primary/10">
+              <div className="min-w-0">
+                <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Editing</p>
+                <h2 className="text-xl leading-tight font-extrabold break-words sm:text-2xl">{selectedUser.name}</h2>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-md bg-foreground/5 px-2 py-0.5 font-mono text-xs font-semibold tracking-wider dark:bg-white/10">
+                    {selectedUser.id}
+                  </span>
+                  <StatusPill status={selectedUser.currentStatus} />
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Clear selection"
+                className="-mt-1 -mr-2 shrink-0"
+                onClick={() => {
+                  setSelectedUser(null)
+                  setEditData({})
+                }}
+              >
+                <X />
+              </Button>
+            </div>
 
-                      <div className="flex flex-wrap gap-1">
-                        {editData.eventsRegistered?.map((event: string) => (
-                          <Badge key={event} variant="secondary" className="pr-1">
+            <div className="space-y-5 px-4 py-5 sm:px-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-name">Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={editData.name || ""}
+                    onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-id">Student ID</Label>
+                  <Input id="edit-id" value={editData.id || ""} disabled className="font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-college">College Name</Label>
+                  <Input
+                    id="edit-college"
+                    value={editData.collegeName || ""}
+                    onChange={(e) => setEditData({ ...editData, collegeName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-phone">Phone Number</Label>
+                  <Input
+                    id="edit-phone"
+                    type="tel"
+                    value={editData.phoneNumber || ""}
+                    onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editData.email || ""}
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t pt-5">
+                <Label>Events Registered</Label>
+                <div className="rounded-lg border bg-muted/30">
+                  <ScrollArea className="h-[150px] p-2">
+                    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                      {availableEvents.length > 0 ? (
+                        availableEvents.map((event) => (
+                          <label
+                            key={event}
+                            htmlFor={`edit-event-${event}`}
+                            className="flex cursor-pointer items-center gap-2 rounded-md p-1.5 text-sm font-medium hover:bg-accent"
+                          >
+                            <Checkbox
+                              id={`edit-event-${event}`}
+                              checked={editData.eventsRegistered?.includes(event) || false}
+                              onCheckedChange={(checked) =>
+                                setEditData({ ...editData, eventsRegistered: toggleEvent(editData.eventsRegistered || [], event, !!checked) })
+                              }
+                            />
                             {event}
-                            <button 
-                              className="ml-1 hover:text-destructive"
-                              onClick={() => {
-                                const current = editData.eventsRegistered || [];
-                                setEditData({ ...editData, eventsRegistered: current.filter((e: string) => e !== event) })
-                              }}
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="col-span-full p-2 text-center text-xs text-muted-foreground italic">
+                          {fetchingEvents ? 'Loading events...' : 'No existing events found.'}
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                {!!editData.eventsRegistered?.length && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {editData.eventsRegistered.map((event: string) => (
+                      <Badge key={event} variant="secondary" className="gap-1 pr-1">
+                        {event}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${event}`}
+                          className="rounded-sm p-0.5 hover:bg-black/10 hover:text-destructive"
+                          onClick={() => {
+                            const current = editData.eventsRegistered || [];
+                            setEditData({ ...editData, eventsRegistered: current.filter((e: string) => e !== event) })
+                          }}
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {showBandFields && (
+                <div className="space-y-3 border-t pt-5">
+                  <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Band details</p>
+                  <div className="grid grid-cols-1 gap-3 xs:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-band">Band Number</Label>
+                      <Input
+                        id="edit-band"
+                        placeholder="e.g. B3"
+                        value={(editData.additionalParams?.bandNumber as string) ?? ""}
+                        onChange={(e) => setEditData({
+                          ...editData,
+                          additionalParams: { ...editData.additionalParams, bandNumber: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-indesk">In-Desk Number</Label>
+                      <Input
+                        id="edit-indesk"
+                        placeholder="e.g. D5"
+                        value={(editData.additionalParams?.inDeskNumber as string) ?? ""}
+                        onChange={(e) => setEditData({
+                          ...editData,
+                          additionalParams: { ...editData.additionalParams, inDeskNumber: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-outdesk">Out-Desk Number</Label>
+                      <Input
+                        id="edit-outdesk"
+                        placeholder="e.g. D2"
+                        value={(editData.additionalParams?.outDeskNumber as string) ?? ""}
+                        onChange={(e) => setEditData({
+                          ...editData,
+                          additionalParams: { ...editData.additionalParams, outDeskNumber: e.target.value }
+                        })}
+                      />
                     </div>
                   </div>
-
-                  {isBanjaara && (
-                    <div className="col-span-2 space-y-3">
-                      <label className="text-sm font-medium block">Banjaara Details</label>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="edit-band" className="text-sm">Band Number</Label>
-                          <Input
-                            id="edit-band"
-                            className="mt-1"
-                            placeholder="e.g. B3"
-                            value={(editData.additionalParams?.bandNumber as string) ?? ""}
-                            onChange={(e) => setEditData({
-                              ...editData,
-                              additionalParams: { ...editData.additionalParams, bandNumber: e.target.value }
-                            })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-indesk" className="text-sm">In-Desk Number</Label>
-                          <Input
-                            id="edit-indesk"
-                            className="mt-1"
-                            placeholder="e.g. D5"
-                            value={(editData.additionalParams?.inDeskNumber as string) ?? ""}
-                            onChange={(e) => setEditData({
-                              ...editData,
-                              additionalParams: { ...editData.additionalParams, inDeskNumber: e.target.value }
-                            })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-outdesk" className="text-sm">Out-Desk Number</Label>
-                          <Input
-                            id="edit-outdesk"
-                            className="mt-1"
-                            placeholder="e.g. D2"
-                            value={(editData.additionalParams?.outDeskNumber as string) ?? ""}
-                            onChange={(e) => setEditData({
-                              ...editData,
-                              additionalParams: { ...editData.additionalParams, outDeskNumber: e.target.value }
-                            })}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="edit-flagnote" className="text-sm">Flag Note <span className="text-muted-foreground font-normal">(leave empty to unflag)</span></Label>
-                        <Input
-                          id="edit-flagnote"
-                          className="mt-1"
-                          placeholder="Reason for flagging..."
-                          value={(editData.additionalParams?.flagNote as string) ?? ""}
-                          onChange={(e) => setEditData({
-                            ...editData,
-                            additionalParams: { ...editData.additionalParams, flagNote: e.target.value }
-                          })}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      onClick={handleUpdate}
-                      disabled={actionLoading}
-                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoading ? "Updating..." : "Update Information"}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setSelectedUser(null)
-                        setEditData({})
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                      disabled={actionLoading}
-                    >
-                      Cancel
-                    </Button>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-flagnote">
+                      Flag Note <span className="text-xs font-normal text-muted-foreground">(leave empty to unflag)</span>
+                    </Label>
+                    <Input
+                      id="edit-flagnote"
+                      placeholder="Reason for flagging..."
+                      value={(editData.additionalParams?.flagNote as string) ?? ""}
+                      onChange={(e) => setEditData({
+                        ...editData,
+                        additionalParams: { ...editData.additionalParams, flagNote: e.target.value }
+                      })}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 border-t bg-muted/50 px-4 py-4 sm:px-6">
+              <Button
+                onClick={() => {
+                  setSelectedUser(null)
+                  setEditData({})
+                }}
+                variant="outline"
+                size="xl"
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdate} disabled={actionLoading} size="xl">
+                {actionLoading ? <Loader2 className="animate-spin" /> : <Save />}
+                {actionLoading ? "Updating..." : "Save"}
+              </Button>
+            </div>
+          </section>
+        ) : (
+          <div className="rounded-xl border border-dashed bg-card/50 px-6 py-12 text-center">
+            <UserCog className="mx-auto mb-3 size-8 text-primary/40" />
+            <p className="font-semibold">No student selected</p>
+            <p className="mt-1 text-sm text-muted-foreground">Search above to find a student to edit.</p>
+          </div>
+        )}
+      </div>
+    </AppShell>
   )
 }

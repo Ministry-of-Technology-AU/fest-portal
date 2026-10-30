@@ -2,30 +2,40 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { useSession } from "next-auth/react"
-import { Navigation } from "@/components/navigation"
+import { useOperator } from "@/components/offline-provider"
+import { tracksBands } from "@/lib/bands"
+import { ClipboardCheck, Flag, Loader2, LogIn, LogOut } from "lucide-react"
+import { AppShell } from "@/components/app-shell"
+import { PageHeader } from "@/components/page-header"
 import { UserSearch } from "@/components/user-search"
+import { StudentSummary } from "@/components/student-summary"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { User, SecurityStatus } from "@/lib/types"
-import { updateRegistrationStatus } from "@/lib/api"
+import type { User } from "@/lib/types"
+import type { StatusAction } from "@/lib/transitions"
+import { TRANSITIONS } from "@/lib/transitions"
+import { recordStatusChange, refreshStudent } from "@/lib/offline/engine"
+import { useStudent } from "@/lib/offline/hooks"
+import { announceResult } from "@/lib/offline/feedback"
 
 export default function RegistrationPage() {
-  const { data: session } = useSession()
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const { session } = useOperator()
+  const [picked, setPicked] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [bandNumber, setBandNumber] = useState("")
   const [inDeskNumber, setInDeskNumber] = useState("")
   const [outDeskNumber, setOutDeskNumber] = useState("")
   const [flagNote, setFlagNote] = useState("")
 
-  const isBanjaara = session?.user?.name === "banjaara"
+  const showBandFields = tracksBands(session?.user?.name)
+  // Follows background syncs, so the status shown is the latest this device knows
+  const selectedUser = useStudent(picked?.id ?? null, picked)
 
   const handleSelectUser = (user: User | null) => {
-    setSelectedUser(user)
-    if (isBanjaara && user?.additionalParams) {
+    setPicked(user)
+    if (user) refreshStudent(user.id)
+    if (showBandFields && user?.additionalParams) {
       setBandNumber((user.additionalParams.bandNumber as string) ?? "")
       setInDeskNumber((user.additionalParams.inDeskNumber as string) ?? "")
       setOutDeskNumber((user.additionalParams.outDeskNumber as string) ?? "")
@@ -38,300 +48,130 @@ export default function RegistrationPage() {
     }
   }
 
-  const handleRegIn = async () => {
+  const handleAction = async (action: StatusAction) => {
     if (!selectedUser || actionLoading) return
 
-    if (isBanjaara && (!bandNumber.trim() || !inDeskNumber.trim())) {
+    if (showBandFields && action === "reg-in" && (!bandNumber.trim() || !inDeskNumber.trim())) {
       toast.error("Band number and in-desk number are required")
       return
     }
-
-    try {
-      setActionLoading(true)
-      const additionalParams = isBanjaara
-        ? { bandNumber: bandNumber.trim(), inDeskNumber: inDeskNumber.trim(), ...(flagNote.trim() ? { flagNote: flagNote.trim() } : { flagNote: "" }) }
-        : undefined
-      await updateRegistrationStatus(selectedUser.id, "reg-in", additionalParams)
-
-      toast.success(`Registration-In completed for ${selectedUser.name}`, {
-        description: `Student ${selectedUser.id} is now registered-in`,
-        style: {
-          background: '#10b981',
-          color: 'white',
-          border: '1px solid #059669'
-        }
-      })
-
-      setSelectedUser(null)
-      setBandNumber("")
-      setInDeskNumber("")
-      setOutDeskNumber("")
-      setFlagNote("")
-    } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        style: {
-          background: '#ef4444',
-          color: 'white',
-          border: '1px solid #dc2626'
-        }
-      })
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleRegOut = async () => {
-    if (!selectedUser || actionLoading) return
-
-    if (isBanjaara && !outDeskNumber.trim()) {
+    if (showBandFields && action === "reg-out" && !outDeskNumber.trim()) {
       toast.error("Out-desk number is required")
       return
     }
 
+    const additionalParams = !showBandFields
+      ? undefined
+      : action === "reg-in"
+        ? { bandNumber: bandNumber.trim(), inDeskNumber: inDeskNumber.trim(), flagNote: flagNote.trim() }
+        : { outDeskNumber: outDeskNumber.trim() }
+
     try {
       setActionLoading(true)
-      const additionalParams = isBanjaara
-        ? { outDeskNumber: outDeskNumber.trim() }
-        : undefined
-      await updateRegistrationStatus(selectedUser.id, "reg-out", additionalParams)
-
-      toast.success(`Registration-Out completed for ${selectedUser.name}`, {
-        description: `Student ${selectedUser.id} is now registered-out`,
-        style: {
-          background: '#10b981',
-          color: 'white',
-          border: '1px solid #059669'
-        }
-      })
-
-      setSelectedUser(null)
-      setBandNumber("")
-      setInDeskNumber("")
-      setOutDeskNumber("")
-    } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        style: {
-          background: '#ef4444',
-          color: 'white',
-          border: '1px solid #dc2626'
-        }
-      })
+      const result = await recordStatusChange(selectedUser, action, additionalParams)
+      if (announceResult(result, TRANSITIONS[action].label, selectedUser)) handleSelectUser(null)
     } finally {
       setActionLoading(false)
     }
   }
 
-  const getStatusDisplay = (status: SecurityStatus) => {
-    const statusConfig = {
-      "gate-out": { label: "Gate-Out", color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" },
-      "gate-in": { label: "Gate-In", color: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" },
-      "reg-in": { label: "Registration-In", color: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" },
-      "reg-out": { label: "Registration-Out", color: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" },
-    }
-    return statusConfig[status]
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground">Registration Management</h2>
-          <p className="text-muted-foreground mt-2">Check students in and out for registration</p>
-        </div>
+    <AppShell width="narrow">
+      <PageHeader
+        icon={ClipboardCheck}
+        eyebrow="Registration desk"
+        title="Registration"
+        description="Find a student, then register them in or out."
+      />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Search Student</CardTitle>
-            <CardDescription>Find student by ID or name</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <UserSearch onSelectUser={handleSelectUser} />
+      <div className="space-y-5">
+        <UserSearch onSelectUser={handleSelectUser} />
 
-            {selectedUser && (
-              <Card className="bg-muted/50 border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-lg">{selectedUser.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
+        {selectedUser ? (
+          <StudentSummary
+            key={selectedUser.id}
+            user={selectedUser}
+            onClear={() => handleSelectUser(null)}
+            actions={
+              <>
+                <Button onClick={() => handleAction("reg-in")} disabled={actionLoading} variant="success" size="xl">
+                  {actionLoading ? <Loader2 className="animate-spin" /> : <LogIn />}
+                  Reg In
+                </Button>
+                <Button onClick={() => handleAction("reg-out")} disabled={actionLoading} size="xl">
+                  {actionLoading ? <Loader2 className="animate-spin" /> : <LogOut />}
+                  Reg Out
+                </Button>
+              </>
+            }
+          >
+            {showBandFields && (
+              <div className="space-y-3 border-t pt-5">
+                {!!selectedUser.additionalParams?.flagNote && (
+                  <div className="flex gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+                    <Flag className="mt-0.5 size-4 shrink-0 text-destructive" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Student ID</p>
-                      <p className="font-semibold">{selectedUser.id}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">College</p>
-                      <p className="font-semibold">{selectedUser.collegeName}</p>
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-semibold text-sm break-all">{selectedUser.email}</p>
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <p className="text-sm text-muted-foreground">Phone</p>
-                      <p className="font-semibold">{selectedUser.phoneNumber}</p>
+                      <p className="text-sm font-bold text-destructive">Flagged</p>
+                      <p className="text-sm text-destructive/90">{String(selectedUser.additionalParams.flagNote)}</p>
                     </div>
                   </div>
-
-                  {/* Events Registered */}
-                  <div className="bg-secondary/20 p-3 rounded border">
-                    <p className="text-sm text-muted-foreground mb-2">Events Registered</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUser.eventsRegistered.map((event, index) => (
-                        <span
-                          key={index}
-                          className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-medium"
-                        >
-                          {event}
-                        </span>
-                      ))}
-                    </div>
+                )}
+                <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Band details</p>
+                <div className="grid grid-cols-1 gap-3 xs:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bandNumber">Band Number</Label>
+                    <Input
+                      id="bandNumber"
+                      placeholder="e.g. B3"
+                      value={bandNumber}
+                      onChange={(e) => setBandNumber(e.target.value)}
+                      className="h-10 bg-card"
+                    />
                   </div>
-
-                  {/* Visit Dates */}
-                  <div className="bg-secondary/20 p-3 rounded border">
-                    <p className="text-sm text-muted-foreground mb-2">Visit Dates</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUser.visitDates.map((date, index) => (
-                        <span
-                          key={index}
-                          className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md text-xs font-medium"
-                        >
-                          {date}
-                        </span>
-                      ))}
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="inDeskNumber">In-Desk Number</Label>
+                    <Input
+                      id="inDeskNumber"
+                      placeholder="e.g. D5"
+                      value={inDeskNumber}
+                      onChange={(e) => setInDeskNumber(e.target.value)}
+                      className="h-10 bg-card"
+                    />
                   </div>
-
-                  {/* Current Status */}
-                  <div className="bg-secondary/20 p-3 rounded border">
-                    <p className="text-sm text-muted-foreground mb-2">Current Status</p>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusDisplay(selectedUser.currentStatus).color}`}>
-                        {getStatusDisplay(selectedUser.currentStatus).label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(selectedUser.lastStatusTime).toLocaleString()}
-                      </span>
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="outDeskNumber">Out-Desk Number</Label>
+                    <Input
+                      id="outDeskNumber"
+                      placeholder="e.g. D2"
+                      value={outDeskNumber}
+                      onChange={(e) => setOutDeskNumber(e.target.value)}
+                      className="h-10 bg-card"
+                    />
                   </div>
-
-                  {/* Status Trail */}
-                  {/* <div className="bg-secondary/20 p-3 rounded border">
-                      <p className="text-sm text-muted-foreground mb-2">Status History ({selectedUser.statusTrail.length} entries)</p>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {selectedUser.statusTrail.slice().reverse().slice(0, 5).map((entry, index) => (
-                          <div key={index} className="flex items-center gap-2 text-xs">
-                            <span className={`px-2 py-1 rounded text-xs ${getStatusDisplay(entry.status).color}`}>
-                              {getStatusDisplay(entry.status).label}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {new Date(entry.timestamp).toLocaleTimeString()}
-                            </span>
-                            <span className="text-muted-foreground capitalize text-xs">
-                              ({entry.source})
-                            </span>
-                          </div>
-                        ))}
-                        {selectedUser.statusTrail.length > 5 && (
-                          <p className="text-xs text-muted-foreground italic">
-                            + {selectedUser.statusTrail.length - 5} more entries
-                          </p>
-                        )}
-                      </div>
-                    </div> */}
-
-                  {/* Next Available Actions */}
-                  {/* <div className="bg-secondary/20 p-3 rounded border">
-                      <p className="text-sm text-muted-foreground mb-2">Available Actions</p>
-                      <div className="flex flex-wrap gap-2">
-                        {getNextActions(selectedUser.currentStatus).map((action) => (
-                          <span
-                            key={action}
-                            className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded-md text-xs font-medium"
-                          >
-                            {action === "gate-in" ? "Gate-In" : action === "gate-out" ? "Gate-Out" : action === "reg-in" ? "Registration-In" : "Registration-Out"}
-                          </span>
-                        ))}
-                      </div>
-                    </div> */}
-
-                  {isBanjaara && (
-                    <div className="space-y-2">
-                      {!!selectedUser.additionalParams?.flagNote && (
-                        <div className="bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700 p-3 rounded">
-                          <p className="text-sm font-semibold text-red-700 dark:text-red-300">Flagged</p>
-                          <p className="text-sm text-red-600 dark:text-red-400">{String(selectedUser.additionalParams.flagNote)}</p>
-                        </div>
-                      )}
-                      <div className="bg-secondary/20 p-3 rounded border space-y-3">
-                        <p className="text-sm text-muted-foreground font-medium">Banjaara Registration Details</p>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="space-y-1">
-                            <Label htmlFor="bandNumber" className="text-sm">Band Number</Label>
-                            <Input
-                              id="bandNumber"
-                              placeholder="e.g. B3"
-                              value={bandNumber}
-                              onChange={(e) => setBandNumber(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="inDeskNumber" className="text-sm">In-Desk Number</Label>
-                            <Input
-                              id="inDeskNumber"
-                              placeholder="e.g. D5"
-                              value={inDeskNumber}
-                              onChange={(e) => setInDeskNumber(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="outDeskNumber" className="text-sm">Out-Desk Number</Label>
-                            <Input
-                              id="outDeskNumber"
-                              placeholder="e.g. D2"
-                              value={outDeskNumber}
-                              onChange={(e) => setOutDeskNumber(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="flagNote" className="text-sm">Flag Note <span className="text-muted-foreground font-normal text-xs">(leave empty to unflag)</span></Label>
-                          <Input
-                            id="flagNote"
-                            placeholder="Reason for flagging..."
-                            value={flagNote}
-                            onChange={(e) => setFlagNote(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      onClick={handleRegIn}
-                      disabled={actionLoading}
-                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoading ? "Updating..." : "Registration In"}
-                    </Button>
-                    <Button
-                      onClick={handleRegOut}
-                      disabled={actionLoading}
-                      className="flex-1 bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoading ? "Updating..." : "Registration Out"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="flagNote">
+                    Flag Note <span className="text-xs font-normal text-muted-foreground">(leave empty to unflag)</span>
+                  </Label>
+                  <Input
+                    id="flagNote"
+                    placeholder="Reason for flagging..."
+                    value={flagNote}
+                    onChange={(e) => setFlagNote(e.target.value)}
+                    className="h-10 bg-card"
+                  />
+                </div>
+              </div>
             )}
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+          </StudentSummary>
+        ) : (
+          <div className="rounded-xl border border-dashed bg-card/50 px-6 py-12 text-center">
+            <ClipboardCheck className="mx-auto mb-3 size-8 text-primary/40" />
+            <p className="font-semibold">No student selected</p>
+            <p className="mt-1 text-sm text-muted-foreground">Search above to pull up a student&apos;s pass.</p>
+          </div>
+        )}
+      </div>
+    </AppShell>
   )
 }

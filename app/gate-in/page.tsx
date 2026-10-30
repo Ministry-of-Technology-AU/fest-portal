@@ -1,239 +1,86 @@
 "use client"
 
 import { useState } from "react"
-import { toast } from "sonner"
-import { Navigation } from "@/components/navigation"
+import { DoorOpen, Loader2, LogIn, LogOut } from "lucide-react"
+import { AppShell } from "@/components/app-shell"
+import { PageHeader } from "@/components/page-header"
 import { UserSearch } from "@/components/user-search"
+import { StudentSummary } from "@/components/student-summary"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { User, SecurityStatus } from "@/lib/types"
-import { updateGateStatus } from "@/lib/api"
+import type { User } from "@/lib/types"
+import type { StatusAction } from "@/lib/transitions"
+import { TRANSITIONS } from "@/lib/transitions"
+import { recordStatusChange, refreshStudent } from "@/lib/offline/engine"
+import { useStudent } from "@/lib/offline/hooks"
+import { announceResult } from "@/lib/offline/feedback"
 
 export default function GateInPage() {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [picked, setPicked] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  // Follows background syncs, so the status shown is the latest this device knows
+  const selectedUser = useStudent(picked?.id ?? null, picked)
 
-  const handleGateIn = async () => {
+  const selectUser = (user: User | null) => {
+    setPicked(user)
+    if (user) refreshStudent(user.id)
+  }
+
+  const handleAction = async (action: StatusAction) => {
     if (!selectedUser || actionLoading) return
 
     try {
       setActionLoading(true)
-      await updateGateStatus(selectedUser.id, "gate-in")
-
-      toast.success(`Gate-In completed for ${selectedUser.name}`, {
-        description: `Student ${selectedUser.id} is now gate-in`,
-        style: {
-          background: '#10b981',
-          color: 'white',
-          border: '1px solid #059669'
-        }
-      })
-
-      // Refresh the users list and clear selection
-      setSelectedUser(null)
-    } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        style: {
-          background: '#ef4444',
-          color: 'white',
-          border: '1px solid #dc2626'
-        }
-      })
+      const result = await recordStatusChange(selectedUser, action)
+      if (announceResult(result, TRANSITIONS[action].label, selectedUser)) selectUser(null)
     } finally {
       setActionLoading(false)
     }
-  }
-
-  const handleGateOut = async () => {
-    if (!selectedUser || actionLoading) return
-
-    try {
-      setActionLoading(true)
-      await updateGateStatus(selectedUser.id, "gate-out")
-
-      toast.success(`Gate-Out completed for ${selectedUser.name}`, {
-        description: `Student ${selectedUser.id} is now gate-out`,
-        style: {
-          background: '#10b981',
-          color: 'white',
-          border: '1px solid #059669'
-        }
-      })
-
-      // Refresh the users list and clear selection
-      setSelectedUser(null)
-    } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        style: {
-          background: '#ef4444',
-          color: 'white',
-          border: '1px solid #dc2626'
-        }
-      })
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const getStatusDisplay = (status: SecurityStatus) => {
-    const statusConfig = {
-      "gate-out": { label: "Gate-Out", color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" },
-      "gate-in": { label: "Gate-In", color: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" },
-      "reg-in": { label: "Registration-In", color: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" },
-      "reg-out": { label: "Registration-Out", color: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" },
-    }
-    return statusConfig[status]
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground">Gate-In/Out Management</h2>
-          <p className="text-muted-foreground mt-2">Check students in and out at the gate</p>
-        </div>
+    <AppShell width="narrow">
+      <PageHeader
+        icon={DoorOpen}
+        eyebrow="Gate desk"
+        title="Gate-In / Out"
+        description="Find a student, then check them in or out at the gate."
+      />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Search Student</CardTitle>
-            <CardDescription>Find student by ID or name</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <UserSearch onSelectUser={setSelectedUser} />
+      <div className="space-y-5">
+        <UserSearch onSelectUser={selectUser} />
 
-            {selectedUser && (
-              <Card className="bg-muted/50 border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-lg">{selectedUser.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Student ID</p>
-                      <p className="font-semibold">{selectedUser.id}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">College</p>
-                      <p className="font-semibold">{selectedUser.collegeName}</p>
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-semibold text-sm break-all">{selectedUser.email}</p>
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <p className="text-sm text-muted-foreground">Phone</p>
-                      <p className="font-semibold">{selectedUser.phoneNumber}</p>
-                    </div>
-                  </div>
+        {selectedUser ? (
+          <StudentSummary
+            key={selectedUser.id}
+            user={selectedUser}
+            onClear={() => selectUser(null)}
+            actions={
+              <>
+                <Button onClick={() => handleAction("gate-in")} disabled={actionLoading} variant="success" size="xl">
+                  {actionLoading ? <Loader2 className="animate-spin" /> : <LogIn />}
+                  Gate-In
+                </Button>
+                <Button onClick={() => handleAction("gate-out")} disabled={actionLoading} size="xl">
+                  {actionLoading ? <Loader2 className="animate-spin" /> : <LogOut />}
+                  Gate-Out
+                </Button>
+              </>
+            }
+          />
+        ) : (
+          <EmptyPrompt />
+        )}
+      </div>
+    </AppShell>
+  )
+}
 
-                  {/* Events Registered */}
-                  <div className="bg-secondary/20 p-3 rounded border">
-                    <p className="text-sm text-muted-foreground mb-2">Events Registered</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUser.eventsRegistered.map((event, index) => (
-                        <span
-                          key={index}
-                          className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-medium"
-                        >
-                          {event}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Visit Dates */}
-                  <div className="bg-secondary/20 p-3 rounded border">
-                    <p className="text-sm text-muted-foreground mb-2">Visit Dates</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUser.visitDates.map((date, index) => (
-                        <span
-                          key={index}
-                          className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md text-xs font-medium"
-                        >
-                          {date}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Current Status */}
-                  <div className="bg-secondary/20 p-3 rounded border">
-                    <p className="text-sm text-muted-foreground mb-2">Current Status</p>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusDisplay(selectedUser.currentStatus).color}`}>
-                        {getStatusDisplay(selectedUser.currentStatus).label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(selectedUser.lastStatusTime).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Status Trail */}
-                  {/* <div className="bg-secondary/20 p-3 rounded border">
-                      <p className="text-sm text-muted-foreground mb-2">Status History ({selectedUser.statusTrail.length} entries)</p>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {selectedUser.statusTrail.slice().reverse().slice(0, 5).map((entry, index) => (
-                          <div key={index} className="flex items-center gap-2 text-xs">
-                            <span className={`px-2 py-1 rounded text-xs ${getStatusDisplay(entry.status).color}`}>
-                              {getStatusDisplay(entry.status).label}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {new Date(entry.timestamp).toLocaleTimeString()}
-                            </span>
-                            <span className="text-muted-foreground capitalize text-xs">
-                              ({entry.source})
-                            </span>
-                          </div>
-                        ))}
-                        {selectedUser.statusTrail.length > 5 && (
-                          <p className="text-xs text-muted-foreground italic">
-                            + {selectedUser.statusTrail.length - 5} more entries
-                          </p>
-                        )}
-                      </div>
-                    </div> */}
-
-                  {/* Next Available Actions */}
-                  {/* <div className="bg-secondary/20 p-3 rounded border">
-                      <p className="text-sm text-muted-foreground mb-2">Available Actions</p>
-                      <div className="flex flex-wrap gap-2">
-                        {getNextActions(selectedUser.currentStatus).map((action) => (
-                          <span
-                            key={action}
-                            className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded-md text-xs font-medium"
-                          >
-                            {action === "gate-in" ? "Gate-In" : action === "gate-out" ? "Gate-Out" : action === "reg-in" ? "Registration-In" : "Registration-Out"}
-                          </span>
-                        ))}
-                      </div>
-                    </div> */}
-
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      onClick={handleGateIn}
-                      disabled={actionLoading}
-                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoading ? "Updating..." : "Gate-In"}
-                    </Button>
-                    <Button
-                      onClick={handleGateOut}
-                      disabled={actionLoading}
-                      className="flex-1 bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoading ? "Updating..." : "Gate-Out"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+function EmptyPrompt() {
+  return (
+    <div className="rounded-xl border border-dashed bg-card/50 px-6 py-12 text-center">
+      <DoorOpen className="mx-auto mb-3 size-8 text-primary/40" />
+      <p className="font-semibold">No student selected</p>
+      <p className="mt-1 text-sm text-muted-foreground">Search above to pull up a student&apos;s pass.</p>
     </div>
   )
 }

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import prisma from '@/lib/prisma'
+import { applyStatusChange, parseClientOp } from '@/lib/status-change'
+import { transitionFor } from '@/lib/transitions'
 
 export async function POST(request: NextRequest) {
   try {
     // Get the session
     const session = await auth()
-    
+
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -14,7 +15,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { userId, action } = await request.json()
+    const body = await request.json()
+    const { userId, action } = body
 
     if (!userId || !action) {
       return NextResponse.json(
@@ -23,77 +25,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build query based on user role
-    const whereClause = session.user.role === 'admin' 
-      ? { id: userId } // Admins can access any user
-      : { id: userId, festId: session.user.id } // Fest users can only access their own users
-
-    // Get current user status
-    const user = await prisma.user.findUnique({
-      where: whereClause
-    })
-
-    if (!user) {
+    const transition = transitionFor('gate', action)
+    if (!transition) {
       return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    let newStatus: string | null = null
-    let isValidTransition = false
-
-    if (action === 'gate-in') {
-      // Can only gate-in if currently gate-out
-      if (user.currentStatus === 'gate_out') {
-        newStatus = 'gate_in'
-        isValidTransition = true
-      }
-    } else if (action === 'gate-out') {
-      // Can only gate-out if currently reg-out
-      if (user.currentStatus === 'reg_out' || user.currentStatus === 'gate_in') {
-        newStatus = 'gate_out'
-        isValidTransition = true
-      }
-    }
-
-    if (!isValidTransition || !newStatus) {
-      return NextResponse.json(
-        { error: `Cannot ${action} from current status: ${user.currentStatus.replace('_', '-')}` },
+        { error: `Unknown action: ${action}` },
         { status: 400 }
       )
     }
 
-    const now = new Date()
+    const result = await applyStatusChange({
+      userId,
+      // Fest users can only change their own users; admins can change anyone
+      festId: session.user.role === 'admin' ? null : session.user.id,
+      from: transition.from,
+      to: transition.to,
+      // Sent by the offline queue: makes retries safe and records when the scan happened
+      ...parseClientOp(body),
+      source: 'gate',
+    })
 
-    // Update user status and create trail entry in a transaction
-    const result = await prisma.$transaction([
-      // Update user status
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          currentStatus: newStatus as any,
-          lastStatusTime: now
-        }
-      }),
-      // Create trail entry
-      prisma.status_trail.create({
-        data: {
-          userId,
-          status: newStatus as any,
-          timestamp: now,
-          source: 'gate'
-        }
-      })
-    ])
+    if (!result.ok) {
+      return result.reason === 'not_found'
+        ? NextResponse.json({ error: 'User not found' }, { status: 404 })
+        : NextResponse.json(
+            { error: `Cannot ${action} from current status: ${result.currentStatus}` },
+            { status: 400 }
+          )
+    }
 
     return NextResponse.json({
       success: true,
       message: `Successfully ${action}`,
-      user: {
-        ...result[0],
-        currentStatus: result[0].currentStatus.replace('_', '-')
-      }
+      user: result.user
     })
 
   } catch (error) {

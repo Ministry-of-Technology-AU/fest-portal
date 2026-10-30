@@ -1,202 +1,198 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { signOut, useSession } from "next-auth/react"
+import { signOutAndClear, useOperator } from "@/components/offline-provider"
+import { getState as getOfflineState } from "@/lib/offline/engine"
+import { LogOut, Menu, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { visibleNavLinks } from "@/lib/nav"
+import { cn } from "@/lib/utils"
+
+function Brand() {
+  return (
+    <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+        <ShieldCheck className="size-5" />
+      </span>
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="truncate font-heading text-base font-extrabold text-primary dark:text-primary-extralight">
+          Security Portal
+        </span>
+        <span className="truncate text-[11px] text-muted-foreground">by Techmin</span>
+      </span>
+    </Link>
+  )
+}
+
+function initials(name: string | null | undefined) {
+  if (!name) return "?"
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
 
 export function Navigation() {
-  const router = useRouter()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const { data: session } = useSession()
+  const { session } = useOperator()
   const userRole = session?.user?.role
+  const links = visibleNavLinks(userRole)
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/" })
+    const unsent = getOfflineState().queue.length
+    if (
+      unsent > 0 &&
+      !window.confirm(
+        `${unsent} scan${unsent === 1 ? " hasn't" : "s haven't"} reached the server yet. Signing out deletes ${unsent === 1 ? "it" : "them"} from this device. Sign out anyway?`
+      )
+    ) {
+      return
+    }
+    await signOutAndClear()
   }
 
-  const navigationLinks = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      )
-    },
-    {
-      href: "/gate-in",
-      label: "Gate-In",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-        </svg>
-      )
-    },
-    {
-      href: "/registration",
-      label: "Registration",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      )
-    },
-    {
-      href: "/user-management",
-      label: "Manage Users",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-        </svg>
-      )
-    },
-    {
-      href: "/fest-users",
-      label: "Fest Users",
-      adminOnly: true,
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-        </svg>
-      )
-    },
-    {
-      href: "/admin",
-      label: "Admin",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      )
-    },
-  ]
-
-  const closeSheet = () => setIsOpen(false)
-
-  // Filter out admin-only links for non-admin users
-  const filteredLinks = navigationLinks.filter(link =>
-    !link.adminOnly || userRole === 'admin'
-  )
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
 
   return (
-    <nav className="bg-primary text-primary-foreground shadow-md">
-      <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-        {/* Logo/Brand */}
-        <div className="flex items-center">
-          <h1 className="text-xl font-bold">Security Portal</h1>
+    <nav className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <Brand />
+
+        {/* Desktop links */}
+        <div className="hidden items-center gap-1 lg:flex">
+          {links.map((link) => {
+            const active = isActive(link.href)
+            const Icon = link.icon
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-primary/8 hover:text-primary dark:hover:bg-white/5 dark:hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" />
+                {link.label}
+              </Link>
+            )
+          })}
         </div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
-          <div className="flex gap-4">
-            {filteredLinks.map((link) => {
-              const isActive = pathname === link.href
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`hover:opacity-80 transition-opacity duration-200 px-3 py-2 rounded-md hover:bg-primary-foreground/10 ${isActive
-                    ? 'bg-primary-foreground/20 font-semibold'
-                    : ''
-                    }`}
-                >
-                  {link.label}
-                </Link>
-              )
-            })}
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+
+          {/* Desktop account menu */}
+          <div className="hidden lg:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Account" className="rounded-full">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-extrabold text-secondary-foreground ring-2 ring-background">
+                    {initials(session?.user?.name)}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <div className="px-2 py-1.5">
+                  <p className="truncate text-sm font-semibold">{session?.user?.name ?? "Signed in"}</p>
+                  {session?.user?.email && (
+                    <p className="truncate text-xs text-muted-foreground">{session.user.email}</p>
+                  )}
+                  {userRole && (
+                    <p className="mt-1 text-[11px] font-bold tracking-wider text-primary uppercase dark:text-primary-extralight">
+                      {userRole}
+                    </p>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                  <LogOut className="size-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary bg-transparent"
-          >
-            Logout
-          </Button>
-        </div>
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden">
+          {/* Mobile drawer */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary bg-transparent"
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-                <span className="sr-only">Open navigation menu</span>
+              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation menu">
+                <Menu className="size-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle>Security Portal</SheetTitle>
+            <SheetContent side="left" className="w-[85vw] max-w-xs gap-0 bg-sidebar p-0">
+              <SheetHeader className="border-b border-sidebar-border p-4">
+                <SheetTitle className="sr-only">Navigation</SheetTitle>
+                <SheetDescription className="sr-only">Portal sections</SheetDescription>
+                <Brand />
               </SheetHeader>
-              <div className="flex flex-col space-y-2 mt-6">
-                {filteredLinks.map((link) => {
-                  const isActive = pathname === link.href
+              <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+                <p className="px-2 pt-1 pb-2 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+                  Tools
+                </p>
+                {links.map((link) => {
+                  const active = isActive(link.href)
+                  const Icon = link.icon
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
-                      onClick={closeSheet}
-                      className={`flex items-center px-4 py-3 text-base font-medium rounded-lg transition-colors duration-200 border ${isActive
-                        ? 'bg-primary text-primary-foreground border-primary font-semibold'
-                        : 'text-foreground hover:bg-muted border-transparent hover:border-border'
-                        }`}
+                      onClick={() => setIsOpen(false)}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-3 text-[15px] font-semibold transition-colors",
+                        active
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-foreground hover:bg-primary-light/15",
+                      )}
                     >
-                      <span className={`mr-3 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
-                        {link.icon}
-                      </span>
-                      <span>{link.label}</span>
+                      <Icon className={cn("size-5", active ? "text-primary-foreground" : "text-muted-foreground")} />
+                      {link.label}
                     </Link>
                   )
                 })}
-                <div className="pt-6 mt-6 border-t border-border">
-                  <Button
-                    onClick={async () => {
-                      await handleLogout()
-                      closeSheet()
-                    }}
-                    variant="destructive"
-                    className="w-full"
-                    size="lg"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                      />
-                    </svg>
-                    Logout
-                  </Button>
-                </div>
+              </div>
+              <div className="border-t border-sidebar-border p-3">
+                {session?.user?.name && (
+                  <div className="mb-2 flex items-center gap-3 px-2 py-1">
+                    <span className="flex size-9 items-center justify-center rounded-full bg-secondary text-xs font-extrabold text-secondary-foreground">
+                      {initials(session.user.name)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{session.user.name}</p>
+                      {userRole && <p className="text-xs text-muted-foreground capitalize">{userRole}</p>}
+                    </div>
+                  </div>
+                )}
+                <Button
+                  onClick={async () => {
+                    setIsOpen(false)
+                    await handleLogout()
+                  }}
+                  variant="ghost"
+                  className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  size="lg"
+                >
+                  <LogOut className="size-4" />
+                  Sign out
+                </Button>
               </div>
             </SheetContent>
           </Sheet>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import { sendUserUpdatedEmail } from '@/lib/mail'
+import { invalidateCache } from '@/lib/cache'
 
 export async function PUT(request: NextRequest) {
   try {
@@ -102,6 +103,9 @@ export async function PUT(request: NextRequest) {
         }
       })
     }
+
+    // connectOrCreate above may have created new events
+    if (userData.eventsRegistered) invalidateCache('events')
 
     // Fetch the final user with updated events for the response
     const finalUser = await prisma.user.findUnique({

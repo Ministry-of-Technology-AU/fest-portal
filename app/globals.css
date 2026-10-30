@@ -3,81 +3,140 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Palette mirrors next-platform (Ministry of Technology) so both portals feel like one product */
+@theme {
+  --breakpoint-xs: 475px;
+
+  /* Primaries */
+  --color-primary-light: #9b4e43;
+  --color-primary-extralight: #c89188;
+  --color-primary-dark: #60150a;
+  --color-primary-extradark: #3b0800;
+  --color-primary-bright: #9c2414;
+
+  /* Secondaries */
+  --color-secondary-light: #ffe7a9;
+  --color-secondary-extralight: #eef5db;
+  --color-secondary-dark: #f4b448;
+  --color-secondary-extradark: #d68e3a;
+
+  /* Greens */
+  --color-green: #519872;
+  --color-green-light: #70c49c;
+  --color-green-extralight: #8fd8ca;
+  --color-green-dark: #2b6948;
+  --color-green-extradark: #1b3022;
+
+  /* Blues */
+  --color-blue: #0267c1;
+  --color-blue-light: #5197d6;
+  --color-blue-extralight: #a1cdf1;
+  --color-blue-dark: #154a7b;
+  --color-blue-extradark: #1c3144;
+
+  /* Neutrals */
+  --color-gray: #767371;
+  --color-gray-light: #bfbcba;
+  --color-gray-extralight: #f2f1ee;
+  --color-gray-dark: #57504c;
+  --color-neutral-light: #27272a;
+
+  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
 :root {
-  /* Updated color scheme to use maroon (#87281b) as primary */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.35 0.15 25);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.35 0.15 25);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.35 0.15 25);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.35 0.15 25);
-  --chart-1: oklch(0.35 0.15 25);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.35 0.15 25);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.35 0.15 25);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.35 0.15 25);
+  --radius: 0.725rem;
+  --background: #f7f4f2;
+  --foreground: #282828;
+  --card: #ffffff;
+  --card-foreground: #282828;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #87281b;
+  --primary-foreground: #fff8f0;
+  --secondary: #ffcd74;
+  --secondary-foreground: #3a3a3a;
+  --muted: #f2f1ee;
+  --muted-foreground: #767371;
+  --accent: #f2ebe7;
+  --accent-foreground: #3a3a3a;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+  --border: #e4dfdb;
+  --input: #ddd7d2;
+  --ring: #c89188;
+  --chart-1: #87281b;
+  --chart-2: #519872;
+  --chart-3: #0267c1;
+  --chart-4: #ffcd74;
+  --chart-5: #767371;
+  --sidebar: #fff8f0;
+  --sidebar-foreground: #282828;
+  --sidebar-primary: #87281b;
+  --sidebar-primary-foreground: #fff8f0;
+  --sidebar-accent: #f2ebe7;
+  --sidebar-accent-foreground: #3a3a3a;
+  --sidebar-border: #e4dfdb;
+  --sidebar-ring: #c89188;
+  --sb-thumb: #bfbcba;
+  --sb-thumb-hover: #767371;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.5 0.15 25);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.5 0.15 25);
-  --accent-foreground: oklch(0.145 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.5 0.15 25);
-  --chart-1: oklch(0.5 0.15 25);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.5 0.15 25);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.5 0.15 25);
+  --background: #171717;
+  --foreground: #f7f4f2;
+  --card: #0f0f11;
+  --card-foreground: #fff8f0;
+  --popover: #232323;
+  --popover-foreground: #fff8f0;
+  --primary: #9c2414;
+  --primary-foreground: #f7f4f2;
+  --secondary: #4e342e;
+  --secondary-foreground: #ffe7a9;
+  --muted: #262626;
+  --muted-foreground: #a8a29e;
+  --accent: #2e2320;
+  --accent-foreground: #fff8f0;
+  --destructive: #e05a4a;
+  --destructive-foreground: #ffffff;
+  --border: #353535;
+  --input: #404040;
+  --ring: #9b4e43;
+  --chart-1: #c89188;
+  --chart-2: #70c49c;
+  --chart-3: #5197d6;
+  --chart-4: #ffcd74;
+  --chart-5: #a8a29e;
+  --sidebar: #1c1c1c;
+  --sidebar-foreground: #fff8f0;
+  --sidebar-primary: #9c2414;
+  --sidebar-primary-foreground: #fff8f0;
+  --sidebar-accent: #2e2320;
+  --sidebar-accent-foreground: #fff8f0;
+  --sidebar-border: #353535;
+  --sidebar-ring: #9b4e43;
+  --sb-thumb: #4b5563;
+  --sb-thumb-hover: #6b7280;
 }
 
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  /* Fonts (variables are set by next/font in app/layout.tsx) */
+  --font-body: var(--font-nunito-sans), "Nunito Sans", sans-serif;
+  --font-heading: var(--font-nunito), "Nunito", sans-serif;
+  --font-sans: var(--font-nunito-sans), "Nunito Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -120,7 +179,72 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+  }
+
+  html * {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      fill 0.3s ease,
+      stroke 0.3s ease;
+  }
+
+  /* Scrollbars, same treatment as next-platform */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sb-thumb) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--sb-thumb);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--sb-thumb-hover);
+  }
+}
+
+/* Faint dotted backdrop used behind auth screens */
+.bg-dots {
+  background-image: radial-gradient(color-mix(in oklab, var(--primary) 14%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

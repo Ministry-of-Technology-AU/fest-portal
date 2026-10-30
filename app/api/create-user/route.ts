@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { sendUserCreatedEmail } from '@/lib/mail'
+import { invalidateCache } from '@/lib/cache'
 
 // Generate a unique 6-character alphanumeric ID
 async function generateUniqueId(): Promise<string> {
@@ -170,6 +171,9 @@ export async function POST(request: NextRequest) {
         }
       });
     }
+
+    // connectOrCreate above may have created new events
+    if (userData.eventsRegistered) invalidateCache('events')
 
     // Fetch the complete user data with events
     const completeUser = await prisma.user.findUnique({

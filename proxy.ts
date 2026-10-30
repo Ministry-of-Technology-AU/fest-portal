@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/api/auth', '/']
+  const publicRoutes = ['/login', '/api/auth']
 
   // Check if the current path is a public route
   const isPublicRoute = publicRoutes.some(route =>
@@ -50,8 +50,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - sw.js (service worker; the browser fetches it without following redirects)
      * - public files (images, etc.)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|sw\\.js$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)',
   ],
 }
