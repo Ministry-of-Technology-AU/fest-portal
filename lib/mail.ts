@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
-import path from 'path'
+import type Mail from 'nodemailer/lib/mailer'
+import { SHATRANJ_BANNER_JPEG, SHATRANJ_CAMPUS_JPEG } from '@/lib/email-images'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -10,27 +11,23 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-// Define the static attachments
-const ATTACHMENTS = [
-  {
-    filename: 'Banjaara 2026 Rules and Regulations (External Participants_Attendees).pdf',
-    path: path.join(process.cwd(), 'public', 'Banjaara 2026_ Rules and Regulations (External Participants_Attendees).pdf')
-  },
-  {
-    filename: 'Shuttle Schedule 11th April Banjaara7.0.pdf',
-    path: path.join(process.cwd(), 'public', 'Shuttle Schedule_11th April_Banjaara7.0 - Google Docs 2.pdf')
-  }
+const FEST_NAME = 'Shatranj 2026'
+
+// The template's images, referenced from it as cid:shatranj-banner and cid:shatranj-campus
+const TEMPLATE_IMAGES: Mail.Attachment[] = [
+  { filename: 'shatranj-2026.jpg', content: Buffer.from(SHATRANJ_BANNER_JPEG, 'base64'), contentType: 'image/jpeg', cid: 'shatranj-banner' },
+  { filename: 'ashoka-campus.jpg', content: Buffer.from(SHATRANJ_CAMPUS_JPEG, 'base64'), contentType: 'image/jpeg', cid: 'shatranj-campus' },
 ]
 
-export async function sendEmail(receiver: string, subject: string, body: string, html?: string) {
+export async function sendEmail(receiver: string, subject: string, body: string, html?: string, attachments?: Mail.Attachment[]) {
   try {
     const info = await transporter.sendMail({
-      from: `"Shatranj 2026" <${process.env.SMTP_USER}>`,
+      from: `"${FEST_NAME}" <${process.env.SMTP_USER}>`,
       to: receiver,
       subject,
       text: body,
       html: html || undefined,
-      // attachments: ATTACHMENTS,
+      attachments,
     })
 
     console.log('Email sent successfully:', info.messageId)
@@ -41,155 +38,210 @@ export async function sendEmail(receiver: string, subject: string, body: string,
   }
 }
 
-
 const HTML_TEMPLATE = `
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f9fafb;
-    }
-    .wrapper {
-      width: 100%;
-      table-layout: fixed;
-      background-color: #f9fafb;
-      padding-bottom: 40px;
-    }
-    .main {
-      background-color: #ffffff;
-      margin: 0 auto;
-      width: 100%;
-      max-width: 600px;
-      border-spacing: 0;
-      color: #374151;
-      border-radius: 8px;
-      overflow: hidden;
-      margin-top: 20px;
-      border: 1px solid #e5e7eb;
-    }
-    .content {
-      padding: 40px 30px;
-    }
-    .header-text {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .id-container {
-      background-color: #f0f9ff;
-      border: 1px solid #bae6fd;
-      border-radius: 12px;
-      padding: 30px;
-      text-align: center;
-      margin: 20px 0;
-    }
-    .id-label {
-      color: #0369a1;
-      font-weight: 700;
-      font-size: 16px;
-      margin-bottom: 15px;
-      display: block;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .id-box {
-      display: inline-block;
-      background-color: #ffffff;
-      border: 2px dashed #0ea5e9;
-      border-radius: 8px;
-      padding: 15px 40px;
-      margin: 10px 0;
-    }
-    .id-value {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 32px;
-      font-weight: bold;
-      color: #1e293b;
-      letter-spacing: 4px;
-    }
-    .id-footer {
-      color: #64748b;
-      font-size: 13px;
-      margin-top: 15px;
-      display: block;
-    }
-    .footer {
-      text-align: center;
-      font-size: 12px;
-      color: #9ca3af;
-      padding: 20px;
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="supported-color-schemes" content="dark" />
+  <title>Shatranj 2026 - The ENT Weekender</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; }
+    table { border-collapse: collapse !important; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #0a0a0a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    @media screen and (max-width: 600px) {
+      .responsive-table { width: 100% !important; }
+      .content-padding { padding: 28px 20px 10px 20px !important; }
+      .id-padding { padding: 20px 15px !important; }
+      .id-value { font-size: 24px !important; letter-spacing: 2px !important; }
     }
   </style>
 </head>
-<body>
-  <div class="wrapper">
-    <table class="main" width="100%">
-      <tr>
-        <td class="content">
-          <div class="header-text">
-            <h1 style="color: #111827; margin: 0;">{{TITLE}}</h1>
-            <p style="color: #4b5563;">{{SUBTITLE}}</p>
-          </div>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-font-smoothing: antialiased;">
 
-          <div class="id-container">
-            <span class="id-label">Your Auto-Generated User ID:</span>
-            <div class="id-box">
-              <span class="id-value">{{UNIQUE_ID}}</span>
-            </div>
-            <span class="id-footer">Please keep this ID for your records and future reference.</span>
-          </div>
+  <!-- Outer Background Table -->
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#0a0a0a" style="background-color: #0a0a0a; table-layout: fixed;">
+    <tr>
+      <td align="center" style="padding: 20px 10px 30px 10px;">
 
-          <p style="line-height: 1.6;">Hi <strong>{{USER_NAME}}</strong>,</p>
-          <p style="line-height: 1.6;">{{MESSAGE}}</p>
-          
-          <div style="margin-top: 30px; border-top: 1px solid #f3f4f6; padding-top: 20px;">
-            <p style="font-size: 14px; color: #6b7280; margin-bottom: 5px;"><strong>Event Location:</strong> Ashoka University Campus</p>
-            <p style="font-size: 14px; color: #6b7280; margin: 0;"><strong>Date:</strong> March 27, 2026</p>
-          </div>
-        </td>
-      </tr>
-    </table>
-    <div class="footer">
-      &copy; 2026 Fest Organizing Committee. All rights reserved.
-    </div>
-  </div>
+        <!-- Main Email Container (600px Max) -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" class="responsive-table" bgcolor="#000000" style="max-width: 600px; background-color: #000000; border: 1px solid #262626; border-radius: 12px; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #d4d4d8;">
+
+          <!-- ===== Banner image (900 x 300, shown at 600 x 200; padded so the title is not cramped) ===== -->
+          <tr>
+            <td bgcolor="#000000" style="background-color: #000000; padding: 18px 0 6px 0; font-size: 0; line-height: 0;">
+              <img src="cid:shatranj-banner" width="600" alt="SHATRANJ 2026 - The ENT Weekender | 31st Oct &amp; 1st November" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; color: #f5b80f; font-family: Impact, 'Arial Black', sans-serif; font-size: 22px; line-height: 1.4; text-align: center;" />
+            </td>
+          </tr>
+          <!-- Accent strip -->
+          <tr>
+            <td bgcolor="#f5b80f" style="background-color: #f5b80f; height: 4px; line-height: 4px; font-size: 0;">&nbsp;</td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td class="content-padding" style="padding: 36px 34px 10px 34px;">
+
+              <!-- Header Section -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 25px;">
+                    <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1.3;">{{TITLE}}</h1>
+                    <p style="margin: 0; color: #a1a1aa; font-size: 15px; line-height: 1.5;">{{SUBTITLE}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Unique ID Container Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 10px 0 28px 0;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#121212" style="background-color: #121212; border: 1px solid #3a3320; border-radius: 12px;">
+                      <tr>
+                        <td class="id-padding" align="center" style="padding: 26px 20px;">
+                          <span style="display: block; color: #f5b80f; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;">Your Auto-Generated User ID</span>
+
+                          <!-- Dashed ID Box -->
+                          <table border="0" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color: #000000; border: 2px dashed #f5b80f; border-radius: 8px;">
+                            <tr>
+                              <td align="center" style="padding: 12px 30px;">
+                                <span class="id-value" style="font-family: 'Courier New', Courier, monospace; font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: 3px;">{{UNIQUE_ID}}</span>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <span style="display: block; color: #8a8a93; font-size: 13px; margin-top: 14px;">Please keep this ID for your records and show it at the campus entry.</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Main Message Body -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="font-size: 15px; line-height: 1.65; color: #d4d4d8;">
+                    <p style="margin: 0 0 16px 0;">Hi <strong style="color: #ffffff;">{{USER_NAME}}</strong>,</p>
+                    <div style="margin: 0 0 20px 0; line-height: 1.65; color: #d4d4d8;">
+                      {{MESSAGE}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Event Meta Details -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-top: 1px solid #2a2a2a; margin-top: 20px;">
+                <tr>
+                  <td style="padding-top: 20px; font-size: 14px; color: #a1a1aa; line-height: 1.6;">
+                    <p style="margin: 0 0 6px 0;"><strong style="color: #f5b80f;">Event Location:</strong> Ashoka University Campus</p>
+                    <p style="margin: 0;"><strong style="color: #f5b80f;">Dates:</strong> October 31 &ndash; November 1, 2026</p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ===== Ashoka buildings graphic (fades in from the card background) ===== -->
+          <tr>
+            <td bgcolor="#000000" style="background-color: #000000; padding: 0; font-size: 0; line-height: 0;">
+              <img src="cid:shatranj-campus" width="600" alt="" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0;" />
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Footer Notice -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
+          <tr>
+            <td align="center" style="padding: 20px 10px; font-size: 12px; color: #6b6b73; line-height: 1.4;">
+              &copy; 2026 Fest Organizing Committee. All rights reserved.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>
 `
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+interface TemplateFields {
+  title: string
+  /** HTML */
+  subtitle: string
+  userId: string
+  userName: string
+  /** HTML */
+  message: string
+}
+
+/** Fills the template. Name and ID come from the registration form, so they're escaped. */
+function renderTemplate(fields: TemplateFields) {
+  const values: Record<string, string> = {
+    '{{TITLE}}': escapeHtml(fields.title),
+    '{{SUBTITLE}}': fields.subtitle,
+    '{{UNIQUE_ID}}': escapeHtml(fields.userId),
+    '{{USER_NAME}}': escapeHtml(fields.userName),
+    '{{MESSAGE}}': fields.message,
+  }
+  // A replacer function, so "$" in a name isn't read as a replacement pattern
+  return HTML_TEMPLATE.replace(/\{\{[A-Z_]+\}\}/g, (placeholder) => values[placeholder] ?? placeholder)
+}
+
+export function renderUserCreatedEmail(name: string, userId: string) {
+  const subject = `Welcome to ${FEST_NAME} — Your Registration ID`
+  const body = `Hi ${name},\n\nYou're registered for ${FEST_NAME} — The ENT Weekender, October 31 – November 1 at Ashoka University.\n\nYour User ID: ${userId}\n\nThis is mandatory for entry — please save it and show it at the campus entry.\n\nSee you at the fest!\nTeam Shatranj`
+
+  const html = renderTemplate({
+    title: 'Registration Confirmed!',
+    subtitle: `You're in for <b>${FEST_NAME}</b> — The ENT Weekender!`,
+    userId,
+    userName: name,
+    message: `Your User ID above is <b>mandatory for entry</b>, so please keep this email handy and show the ID at the campus entry.<br><br>Can't wait to host you. See you soon!<br><br><b>Warm regards,<br>Team Shatranj</b>`,
+  })
+
+  return { subject, body, html }
+}
+
+export function renderUserUpdatedEmail(name: string, userId: string) {
+  const subject = `${FEST_NAME} — Your Information Has Been Updated`
+  const body = `Hi ${name},\n\nYour registration information for ${FEST_NAME} has been updated.\n\nYour User ID: ${userId}\n\nIf you did not request this change, please contact the fest organizers.\n\nSee you at the fest!\nTeam Shatranj`
+
+  const html = renderTemplate({
+    title: 'Information Updated!',
+    subtitle: `Your records for <b>${FEST_NAME}</b> have been updated.`,
+    userId,
+    userName: name,
+    message: `Your registration information has been successfully updated. If you did not request this change, please contact the fest organizers immediately.<br><br><b>Warm regards,<br>Team Shatranj</b>`,
+  })
+
+  return { subject, body, html }
+}
+
 export async function sendUserCreatedEmail(email: string, name: string, userId: string, festName: string) {
-  const subject = `Welcome to Banjaara 7.0 — Your Registration ID`
-  const body = `Hi ${name},\n\nYou're registered for Banjaara 7.0!\n\nYour User ID: ${userId}\n\nThis is mandatory for entry — please save it carefully.\n\nSee you at the fest!\nTeam Banjaara`
-
-  const html = HTML_TEMPLATE
-    .replace('{{TITLE}}', 'Registration Confirmed!')
-    .replace('{{SUBTITLE}}', "You're in for <b>Banjaara 7.0</b> — Ashoka University's biggest cultural fest!")
-    .replace('{{UNIQUE_ID}}', userId)
-    .replace('{{USER_NAME}}', name)
-    .replace('{{MESSAGE}}', `Get ready for 25+ competitions and headliners like <b>Pranav Sharma</b> and <b>Nikhil D'Souza</b>.<br><br>A few things to keep in mind:<br><ul style="padding-left:20px;line-height:1.8;"><li>Please carry <b>physical copies</b> of both your <b>government ID</b> and <b>college ID</b> — soft copies will not be accepted.</li><li>Please go through the policy document and shuttle schedule: <a href="https://drive.google.com/drive/folders/1SAltkJh2CVcYw7haouDe9kIaWwkjkx46?usp=sharing" style="color:#0ea5e9;">Banjaara 7.0 Documents</a></li><li>Shuttle services from Azadpur to Ashoka run on a first-come, first-served basis.</li></ul>Can't wait to host you. See you soon! ✨<br><br><b>Warm regards,<br>Team Banjaara</b>`)
-
-  return sendEmail(email, subject, body, html)
+  const { subject, body, html } = renderUserCreatedEmail(name, userId)
+  return sendEmail(email, subject, body, html, TEMPLATE_IMAGES)
 }
 
 export async function sendUserUpdatedEmail(email: string, name: string, userId: string, festName: string) {
-  const subject = `Banjaara 7.0 — Your Information Has Been Updated`
-  const body = `Hi ${name},\n\nYour registration information for Banjaara 7.0 has been updated.\n\nYour User ID: ${userId}\n\nIf you did not request this change, please contact the fest organizers.\n\nSee you at the fest!`
-
-  const html = HTML_TEMPLATE
-    .replace('{{TITLE}}', 'Information Updated!')
-    .replace('{{SUBTITLE}}', 'Your records for <b>Banjaara 7.0</b> have been updated.')
-    .replace('{{UNIQUE_ID}}', userId)
-    .replace('{{USER_NAME}}', name)
-    .replace('{{MESSAGE}}', 'Your registration information has been successfully updated. If you did not request this change, please contact the fest organizers immediately. <b>PFA the transport schedule and the general guidelines for Banjaara 7.0</b>')
-
-  // Return the promise
-  return sendEmail(email, subject, body, html)
+  const { subject, body, html } = renderUserUpdatedEmail(name, userId)
+  return sendEmail(email, subject, body, html, TEMPLATE_IMAGES)
 }
-
-
-
